@@ -29,7 +29,7 @@ const activeQuests = [
 export default function Quests() {
   return (
     <div className="min-h-screen w-full bg-[#100E0A] flex justify-center font-['Plus_Jakarta_Sans',sans-serif]">
-      <div className="relative w-full max-w-[440px] pb-32 overflow-hidden">
+      <div className="relative w-full sm:max-w-[430px] shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-[#100E0A] pb-32 overflow-hidden">
 
         {/* Decorative blurs */}
         <div className="absolute top-[-84px] right-[178px] w-[300px] h-[300px] rounded-full bg-[#F4A261]/5 blur-[60px] pointer-events-none" />

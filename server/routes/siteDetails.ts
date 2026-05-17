@@ -1,7 +1,18 @@
 import { RequestHandler } from "express";
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiClient: GoogleGenAI | null = null;
+
+function getAIClient() {
+  if (!aiClient) {
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn("GEMINI_API_KEY is not set. Using dummy client.");
+      return null;
+    }
+    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+  return aiClient;
+}
 
 export const handleSiteDetails: RequestHandler = async (req, res) => {
   try {
@@ -22,18 +33,23 @@ Respond ONLY with a JSON object in the exact following format:
 }
 Ensure the JSON is valid and can be directly parsed. No markdown fences.`;
 
+    const ai = getAIClient();
+    if (!ai) {
+      throw new Error("AI Client not initialized");
+    }
+
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
-        responseMimeType: "application/json",
+        tools: [{ googleSearch: {} }]
       }
     });
 
     const resultText = response.text || "{}";
     let details;
     try {
-      details = JSON.parse(resultText);
+      details = JSON.parse(resultText.replace(/```json/g, '').replace(/```/g, '').trim());
     } catch (e) {
       console.error("Failed to parse Gemini response", resultText);
       details = {

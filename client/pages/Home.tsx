@@ -4,7 +4,7 @@ import BottomNav from "@/components/BottomNav";
 export default function Home() {
   return (
     <div className="min-h-screen w-full bg-[#100E0A] flex justify-center font-['Plus_Jakarta_Sans',sans-serif]">
-      <div className="relative w-full max-w-[440px] bg-[#100E0A] pb-32">
+      <div className="relative w-full sm:max-w-[430px] bg-[#100E0A] pb-32 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-12 pb-6">
@@ -16,7 +16,7 @@ export default function Home() {
             />
             <div className="flex flex-col">
               <span className="text-[#FEFAE0]/60 text-xs font-medium tracking-[0.6px] uppercase leading-4">Explorer</span>
-              <span className="text-[#FEFBE0] text-lg font-bold leading-7">Hello Disara!</span>
+              <span className="text-[#FEFBE0] text-lg font-bold leading-7">Hello Explorer!</span>
             </div>
           </div>
           <div className="relative">

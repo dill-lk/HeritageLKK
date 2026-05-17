@@ -17,6 +17,8 @@ import Scanner from "./pages/Scanner";
 import NotFound from "./pages/NotFound";
 
 import Explore from "./pages/Explore";
+import Archive from "./pages/Archive";
+import ArchiveDetail from "./pages/ArchiveDetail";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +89,8 @@ const App = () => {
             <Route path="/explore" element={<Explore />} />
             <Route path="/quests" element={<Quests />} />
             <Route path="/scanner" element={<Scanner />} />
+            <Route path="/archive" element={<Archive />} />
+            <Route path="/archive/:id" element={<ArchiveDetail />} />
             <Route path="/profile" element={<Navigate to="/home" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

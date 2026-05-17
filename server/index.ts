@@ -4,6 +4,7 @@ import cors from "cors";
 import { handleDemo } from "./routes/demo";
 
 import { handleSiteDetails } from "./routes/siteDetails";
+import { handleGenerateArchive } from "./routes/generateArchive";
 
 export function createServer() {
   const app = express();
@@ -20,6 +21,7 @@ export function createServer() {
   });
 
   app.get("/api/site-details", handleSiteDetails);
+  app.post("/api/generate-archive", handleGenerateArchive);
 
   app.get("/api/demo", handleDemo);
 
