@@ -147,7 +147,7 @@ export default function Home() {
               </Link>
 
               {/* Archive */}
-              <div className="rounded-[28px] border border-[#F4A261]/20 bg-white/5 p-4 flex flex-col justify-between h-[134px]">
+              <Link to="/archive" className="rounded-[28px] border border-[#F4A261]/20 bg-white/5 p-4 flex flex-col justify-between h-[134px]">
                 <div className="flex justify-between items-start">
                   <span className="text-3xl leading-9">📖</span>
                   <div className="w-7 h-7 flex items-center justify-center rounded-full bg-[#F4A261]/20">
@@ -163,7 +163,7 @@ export default function Home() {
                   <h3 className="text-[#FEFBE0] text-lg font-bold leading-7">Archive</h3>
                   <p className="text-[#FEFAE0]/60 text-xs leading-4">Ancient Wisdom</p>
                 </div>
-              </div>
+              </Link>
             </div>
           </div>
 

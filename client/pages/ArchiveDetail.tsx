@@ -22,7 +22,9 @@ export default function ArchiveDetail() {
   useEffect(() => {
     async function fetchData() {
       if (isNew) return;
-      
+
+      setIsLoading(true);
+
       // Mock static data for specific routes
       if (id === "mask") {
         setData({
@@ -41,32 +43,44 @@ export default function ArchiveDetail() {
           didYouKnow: "The vibrant colors used in these masks were traditionally derived from natural sources: 'Makulu' (white clay), 'Gokatu' (yellow resin), and charred 'Pol-katu' (coconut shells) for the deep blacks."
         });
         setIsLoading(false);
-      } else if (supabase) {
-        // Fetch from supabase
-        const { data: record, error } = await supabase
-          .from("archives")
-          .select("*")
-          .eq("id", id)
-          .single();
-        
-        if (!error && record) {
-          setData(record);
-        } else {
-          // Fallback if not found
-          setData({
-            title: "Archive Record",
-            subtitle: "HISTORICAL ARCHIVE",
-            location: "SRI LANKA",
-            intro: "An exploration into the deep roots of Sri Lankan heritage and history.",
-            section1Title: "Historical Context",
-            section1Content: "Detailed documentation of this topic is preserved within the national archives.",
-            section2Title: "Cultural Significance",
-            section2Content: "These traditions form the bedrock of the local community's identity.",
-            didYouKnow: "Sri Lanka has a documented history that spans over 3,000 years."
-          });
+        return;
+      }
+
+      const fallbackRecord = {
+        title: "Archive Record",
+        subtitle: "HISTORICAL ARCHIVE",
+        location: "SRI LANKA",
+        intro: "An exploration into the deep roots of Sri Lankan heritage and history.",
+        section1Title: "Historical Context",
+        section1Content: "Detailed documentation of this topic is preserved within the national archives.",
+        section2Title: "Cultural Significance",
+        section2Content: "These traditions form the bedrock of the local community's identity.",
+        didYouKnow: "Sri Lanka has a documented history that spans over 3,000 years."
+      };
+
+      if (supabase) {
+        try {
+          // Fetch from supabase
+          const { data: record, error } = await supabase
+            .from("archives")
+            .select("*")
+            .eq("id", id)
+            .single();
+
+          if (!error && record) {
+            setData(record);
+          } else {
+            setData(fallbackRecord);
+          }
+        } catch {
+          setData(fallbackRecord);
         }
         setIsLoading(false);
+        return;
       }
+
+      setData(fallbackRecord);
+      setIsLoading(false);
     }
     fetchData();
   }, [id, isNew]);
