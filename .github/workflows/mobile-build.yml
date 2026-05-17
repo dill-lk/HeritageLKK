@@ -52,8 +52,8 @@ jobs:
       - name: Decode Android signing keystore
         if: ${{ env.SIGNING_ENABLED == 'true' }}
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/release.keystore
-          chmod 600 /tmp/release.keystore
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+          chmod 600 "$RUNNER_TEMP/release.keystore"
 
       - name: Sign APK
         if: ${{ env.SIGNING_ENABLED == 'true' }}
@@ -76,14 +76,17 @@ jobs:
           SIGNED_APK="${APK_PATH%-unsigned.apk}-signed.apk"
 
           "$BUILD_TOOLS_DIR/apksigner" sign \
-            --ks /tmp/release.keystore \
+            --ks "$RUNNER_TEMP/release.keystore" \
             --ks-key-alias "$ANDROID_KEY_ALIAS" \
             --ks-pass "env:ANDROID_KEYSTORE_PASSWORD" \
             --key-pass "env:ANDROID_KEY_PASSWORD" \
             --out "$SIGNED_APK" \
             "$APK_PATH"
 
-          "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$SIGNED_APK"
+          if ! "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$SIGNED_APK"; then
+            echo "Signed APK verification failed."
+            exit 1
+          fi
           echo "SIGNED_APK_PATH=$SIGNED_APK" >> "$GITHUB_ENV"
 
       - name: Upload APK artifact
@@ -96,7 +99,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload signed APK artifact
-        if: ${{ env.SIGNED_APK_PATH != '' }}
+        if: ${{ env.SIGNING_ENABLED == 'true' && env.SIGNED_APK_PATH != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: android-apk-signed
