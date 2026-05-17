@@ -154,7 +154,7 @@ export default function Explore() {
 
             {/* Suggestions Dropdown */}
             {searchQuery && filteredSites.length > 0 && (
-              <div className="absolute top-[60px] left-0 right-0 bg-[#0F0C0A]/95 border border-white/5 rounded-[20px] shadow-xl overflow-y-auto max-h-[300px] z-10 backdrop-blur-md pb-2 pt-2 custom-scrollbar">
+              <div className="absolute top-[60px] left-0 right-0 bg-[#0F0C0A]/95 border border-white/5 rounded-[20px] shadow-xl overflow-y-auto max-h-[300px] z-10 backdrop-blur-md pb-2 pt-2 hide-scrollbar">
                 {filteredSites.map(site => (
                   <button 
                     key={site.id}

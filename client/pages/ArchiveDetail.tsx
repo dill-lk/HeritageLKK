@@ -14,6 +14,10 @@ export default function ArchiveDetail() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(!isNew);
+  const [generateError, setGenerateError] = useState("");
+
+  const getErrorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : "Failed to generate AI content.";
 
   useEffect(() => {
     async function fetchData() {
@@ -69,6 +73,7 @@ export default function ArchiveDetail() {
 
   const handleGenerate = async () => {
     if (!topic.trim()) return;
+    setGenerateError("");
     setIsGenerating(true);
     try {
       const res = await fetch("/api/generate-archive", {
@@ -80,7 +85,14 @@ export default function ArchiveDetail() {
       });
       
       if (!res.ok) {
-        throw new Error(`Server returned ${res.status}`);
+        let message = "";
+        try {
+          const body = await res.json();
+          message = body?.error || "";
+        } catch {
+          message = "";
+        }
+        throw new Error(message || `Server returned ${res.status}`);
       }
       if (!res.body) throw new Error("No readable stream");
 
@@ -104,6 +116,10 @@ export default function ArchiveDetail() {
         streamedMarkdown += chunk;
         
         setData((prev: any) => ({ ...prev, content: streamedMarkdown }));
+      }
+
+      if (!streamedMarkdown.trim()) {
+        throw new Error("The AI service returned an empty response.");
       }
       
       const newArchive = {
@@ -155,7 +171,7 @@ Write a fascinating historical fact.
         content: fallbackMarkdown.trim(),
         images: ["https://images.unsplash.com/photo-1545657805-46eb13251a37?q=80&w=1000&auto=format&fit=crop"]
       });
-      alert(e.message || "Failed to generate content. Showing placeholder.");
+      setGenerateError(getErrorMessage(e));
     } finally {
       setIsGenerating(false);
     }
@@ -176,13 +192,23 @@ Write a fascinating historical fact.
             <h1 className="text-2xl font-bold mb-4 font-['Playfair_Display',serif] text-center">Generate Archive</h1>
             <p className="text-white/60 text-center text-sm mb-8">Enter a topic to generate a comprehensive historical archive using NVIDIA NIM AI.</p>
             
-            <input 
-              type="text" 
-              value={topic}
-              onChange={e => setTopic(e.target.value)}
-              placeholder="e.g. Ancient Sigiriya Frescoes"
-              className="w-full bg-[#1A1311] border border-[#F4A261]/30 rounded-2xl py-4 px-5 text-white placeholder-white/40 mb-6 outline-none focus:border-[#F4A261]"
-            />
+             <input 
+               type="text" 
+               value={topic}
+               onChange={e => setTopic(e.target.value)}
+               onKeyDown={(e) => {
+                 if (e.key === "Enter" && topic.trim() && !isGenerating) {
+                   void handleGenerate();
+                 }
+               }}
+               placeholder="e.g. Ancient Sigiriya Frescoes"
+               className="w-full bg-[#1A1311] border border-[#F4A261]/30 rounded-2xl py-4 px-5 text-white placeholder-white/40 mb-6 outline-none focus:border-[#F4A261]"
+             />
+             {generateError && (
+               <div className="w-full rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 mb-4">
+                 {generateError}
+               </div>
+             )}
             
             <button 
               onClick={handleGenerate}
