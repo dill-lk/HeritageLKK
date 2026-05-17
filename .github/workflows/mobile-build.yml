@@ -63,8 +63,8 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          APK_PATH="$(find src-tauri/gen/android/app/build/outputs -type f -name '*-unsigned.apk' | sort | head -n 1)"
-          if [ -z "$APK_PATH" ]; then
+          mapfile -t APK_FILES < <(find src-tauri/gen/android/app/build/outputs -type f -name '*-unsigned.apk' | sort)
+          if [ "${#APK_FILES[@]}" -eq 0 ]; then
             echo "No unsigned APK found to sign."
             exit 1
           fi
@@ -74,24 +74,27 @@ jobs:
             echo "Android build-tools not found under ANDROID_HOME=$ANDROID_HOME"
             exit 1
           fi
-          APK_DIR="$(dirname "$APK_PATH")"
-          APK_FILE="$(basename "$APK_PATH" .apk)"
-          APK_FILE_BASE="${APK_FILE//-unsigned/}"
-          SIGNED_APK="$APK_DIR/${APK_FILE_BASE}-signed.apk"
+          for APK_PATH in "${APK_FILES[@]}"; do
+            APK_DIR="$(dirname "$APK_PATH")"
+            APK_FILE="$(basename "$APK_PATH" .apk)"
+            APK_FILE_BASE="${APK_FILE//-unsigned/}"
+            SIGNED_APK="$APK_DIR/${APK_FILE_BASE}-signed.apk"
 
-          "$BUILD_TOOLS_DIR/apksigner" sign \
-            --ks "$RUNNER_TEMP/release.keystore" \
-            --ks-key-alias "$ANDROID_KEY_ALIAS" \
-            --ks-pass "env:ANDROID_KEYSTORE_PASSWORD" \
-            --key-pass "env:ANDROID_KEY_PASSWORD" \
-            --out "$SIGNED_APK" \
-            "$APK_PATH"
+            "$BUILD_TOOLS_DIR/apksigner" sign \
+              --ks "$RUNNER_TEMP/release.keystore" \
+              --ks-key-alias "$ANDROID_KEY_ALIAS" \
+              --ks-pass "env:ANDROID_KEYSTORE_PASSWORD" \
+              --key-pass "env:ANDROID_KEY_PASSWORD" \
+              --out "$SIGNED_APK" \
+              "$APK_PATH"
 
-          if ! "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$SIGNED_APK"; then
-            echo "Signed APK verification failed."
-            exit 1
-          fi
-          echo "SIGNED_APK_PATH=$SIGNED_APK" >> "$GITHUB_ENV"
+            if ! "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$SIGNED_APK"; then
+              echo "Signed APK verification failed for $SIGNED_APK"
+              exit 1
+            fi
+
+            rm -f "$APK_PATH"
+          done
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -103,11 +106,11 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload signed APK artifact
-        if: ${{ env.SIGNING_ENABLED == 'true' && env.SIGNED_APK_PATH != '' }}
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: android-apk-signed
-          path: ${{ env.SIGNED_APK_PATH }}
+          path: src-tauri/gen/android/app/build/outputs/**/*-signed.apk
           if-no-files-found: error
 
   ios:
