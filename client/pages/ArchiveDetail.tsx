@@ -17,7 +17,7 @@ export default function ArchiveDetail() {
   const [generateError, setGenerateError] = useState("");
 
   const getErrorMessage = (error: unknown) =>
-    error instanceof Error ? error.message : "Failed to generate AI content. Displaying fallback example.";
+    error instanceof Error ? error.message : "Failed to generate AI content.";
 
   useEffect(() => {
     async function fetchData() {
@@ -85,7 +85,13 @@ export default function ArchiveDetail() {
       });
       
       if (!res.ok) {
-        const message = await res.text();
+        let message = "";
+        try {
+          const body = await res.json();
+          message = body?.error || "";
+        } catch {
+          message = "";
+        }
         throw new Error(message || `Server returned ${res.status}`);
       }
       if (!res.body) throw new Error("No readable stream");

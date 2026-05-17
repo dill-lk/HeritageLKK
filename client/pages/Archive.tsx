@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, Bookmark, Search, SlidersHorizontal, Play, ChevronRight, Mic, Droplet, Sprout, BookOpen, Plus, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
@@ -32,12 +32,14 @@ export default function Archive() {
     loadArchives();
   }, []);
 
-  const displayedArchives = archives.filter((archive) => {
-    const matchesTab = activeTab === "All Records" || archive.category === activeTab;
-    const q = searchQuery.trim().toLowerCase();
-    const matchesSearch = !q || archive.title.toLowerCase().includes(q) || archive.loc.toLowerCase().includes(q);
-    return matchesTab && matchesSearch;
-  });
+  const displayedArchives = useMemo(() => {
+    return archives.filter((archive) => {
+      const matchesTab = activeTab === "All Records" || archive.category === activeTab;
+      const q = searchQuery.trim().toLowerCase();
+      const matchesSearch = !q || archive.title.toLowerCase().includes(q) || archive.loc.toLowerCase().includes(q);
+      return matchesTab && matchesSearch;
+    });
+  }, [archives, activeTab, searchQuery]);
 
   return (
     <div className="min-h-screen w-full bg-[#100E0A] flex justify-center font-['Plus_Jakarta_Sans',sans-serif]">
