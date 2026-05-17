@@ -47,6 +47,38 @@ jobs:
       - name: Build APK
         run: corepack pnpm tauri:android:build
 
+      - name: Decode Android signing keystore
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/release.keystore
+
+      - name: Sign APK
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          APK_PATH="$(find src-tauri/gen/android/app/build/outputs -type f -name '*-unsigned.apk' | head -n 1)"
+          if [ -z "$APK_PATH" ]; then
+            echo "No unsigned APK found to sign."
+            exit 1
+          fi
+
+          BUILD_TOOLS_DIR="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)"
+          SIGNED_APK="${APK_PATH%-unsigned.apk}-signed.apk"
+
+          "$BUILD_TOOLS_DIR/apksigner" sign \
+            --ks /tmp/release.keystore \
+            --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass "pass:$ANDROID_KEYSTORE_PASSWORD" \
+            --key-pass "pass:$ANDROID_KEY_PASSWORD" \
+            --out "$SIGNED_APK" \
+            "$APK_PATH"
+
+          "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$SIGNED_APK"
+          echo "SIGNED_APK_PATH=$SIGNED_APK" >> "$GITHUB_ENV"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -55,6 +87,14 @@ jobs:
             src-tauri/gen/android/app/build/outputs/**/*.apk
             src-tauri/gen/android/app/build/outputs/**/*.aab
           if-no-files-found: warn
+
+      - name: Upload signed APK artifact
+        if: ${{ env.SIGNED_APK_PATH != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-signed
+          path: ${{ env.SIGNED_APK_PATH }}
+          if-no-files-found: error
 
   ios:
     name: Build iOS artifact
