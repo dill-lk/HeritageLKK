@@ -76,7 +76,8 @@ jobs:
           fi
           APK_DIR="$(dirname "$APK_PATH")"
           APK_FILE="$(basename "$APK_PATH" .apk)"
-          SIGNED_APK="$APK_DIR/${APK_FILE%-unsigned}-signed.apk"
+          APK_FILE_BASE="${APK_FILE/-unsigned/}"
+          SIGNED_APK="$APK_DIR/${APK_FILE_BASE}-signed.apk"
 
           "$BUILD_TOOLS_DIR/apksigner" sign \
             --ks "$RUNNER_TEMP/release.keystore" \
