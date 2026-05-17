@@ -96,13 +96,22 @@ jobs:
             rm -f "$APK_PATH"
           done
 
-      - name: Upload APK artifact
+      - name: Upload APK/AAB artifact (unsigned build)
+        if: ${{ env.SIGNING_ENABLED != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: |
             src-tauri/gen/android/app/build/outputs/**/*.apk
             src-tauri/gen/android/app/build/outputs/**/*.aab
+          if-no-files-found: warn
+
+      - name: Upload AAB artifact (signed build)
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          path: src-tauri/gen/android/app/build/outputs/**/*.aab
           if-no-files-found: warn
 
       - name: Upload signed APK artifact
