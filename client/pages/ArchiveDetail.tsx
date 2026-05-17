@@ -72,7 +72,8 @@ export default function ArchiveDetail() {
           } else {
             setData(fallbackRecord);
           }
-        } catch {
+        } catch (error) {
+          console.error("Archive fetch error:", error);
           setData(fallbackRecord);
         }
         setIsLoading(false);
