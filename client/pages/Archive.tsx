@@ -6,11 +6,12 @@ import { supabase } from "@/lib/supabase";
 
 export default function Archive() {
   const [activeTab, setActiveTab] = useState("All Records");
+  const [searchQuery, setSearchQuery] = useState("");
   const [archives, setArchives] = useState<any[]>([
-    { id: "mask", title: "Traditional Mask Carving", loc: "AMBALANGODA", icon: <div className="text-2xl">🎭</div> },
-    { id: "irrigation", title: "Ancient Irrigation", loc: "HYDROLOGY", icon: <Droplet className="w-6 h-6 text-[#60a5fa] fill-[#60a5fa]/20" /> },
-    { id: "manuscripts", title: "Palm Leaf Manuscripts", loc: "PALM LEAF", icon: <BookOpen className="w-6 h-6 text-[#F4A261] fill-[#F4A261]/20" /> },
-    { id: "biodiversity", title: "Kanneliya Biodiversity", loc: "ENDEMIC", icon: <Sprout className="w-6 h-6 text-[#10b981] fill-[#10b981]/20" /> },
+    { id: "mask", title: "Traditional Mask Carving", loc: "AMBALANGODA", category: "Ancient Sites", icon: <div className="text-2xl">🎭</div> },
+    { id: "irrigation", title: "Ancient Irrigation", loc: "HYDROLOGY", category: "Ancient Sites", icon: <Droplet className="w-6 h-6 text-[#60a5fa] fill-[#60a5fa]/20" /> },
+    { id: "manuscripts", title: "Palm Leaf Manuscripts", loc: "PALM LEAF", category: "Oral History", icon: <BookOpen className="w-6 h-6 text-[#F4A261] fill-[#F4A261]/20" /> },
+    { id: "biodiversity", title: "Kanneliya Biodiversity", loc: "ENDEMIC", category: "Oral History", icon: <Sprout className="w-6 h-6 text-[#10b981] fill-[#10b981]/20" /> },
   ]);
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export default function Archive() {
           id: item.id,
           title: item.title,
           loc: item.location || "SRI LANKA",
+          category: item.subtitle?.toString().toLowerCase().includes("oral") ? "Oral History" : "Ancient Sites",
           icon: <BookOpen className="w-6 h-6 text-[#F4A261] fill-[#F4A261]/20" />
         }));
         setArchives(prev => [...dbArchives, ...prev.filter(p => !dbArchives.find(d => d.id === p.id))]);
@@ -29,6 +31,13 @@ export default function Archive() {
     }
     loadArchives();
   }, []);
+
+  const displayedArchives = archives.filter((archive) => {
+    const matchesTab = activeTab === "All Records" || archive.category === activeTab;
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch = !q || archive.title.toLowerCase().includes(q) || archive.loc.toLowerCase().includes(q);
+    return matchesTab && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen w-full bg-[#100E0A] flex justify-center font-['Plus_Jakarta_Sans',sans-serif]">
@@ -54,6 +63,8 @@ export default function Archive() {
             <input 
               type="text" 
               placeholder="Search documents..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-transparent border-none outline-none flex-1 text-sm text-white placeholder-white/40 font-medium"
             />
           </div>
@@ -114,7 +125,7 @@ export default function Archive() {
         </div>
 
         <div className="px-5 grid grid-cols-2 gap-4 pb-20">
-          {archives.map((item) => (
+          {displayedArchives.map((item) => (
             <Link key={item.id} to={`/archive/${item.id}`} className="bg-[#1A1311] border border-white/5 rounded-[24px] p-5 flex flex-col justify-between aspect-[3/4] relative group">
               <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-4">
                 {item.icon}
@@ -130,6 +141,11 @@ export default function Archive() {
               </div>
             </Link>
           ))}
+          {displayedArchives.length === 0 && (
+            <div className="col-span-2 rounded-[24px] border border-white/5 bg-[#1A1311] p-6 text-center text-white/60 text-sm">
+              No archive records found for this filter.
+            </div>
+          )}
         </div>
 
         {/* Floating Add Action Button */}

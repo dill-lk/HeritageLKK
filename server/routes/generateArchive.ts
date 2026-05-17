@@ -2,11 +2,14 @@ import { RequestHandler } from "express";
 
 export const handleGenerateArchive: RequestHandler = async (req, res) => {
   try {
-    const { topic } = req.body;
+    const topic = typeof req.body?.topic === "string" ? req.body.topic.trim() : "";
+    if (!topic) {
+      return res.status(400).json({ error: "Topic is required" });
+    }
 
-    const apiKey = "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";
+    const apiKey = process.env.NVIDIA_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: "NVIDIA API key not set" });
+      return res.status(500).json({ error: "NVIDIA_API_KEY is not configured" });
     }
 
     const prompt = `You are a heritage archivist for Sri Lanka. Generate an engaging archive article about "${topic}".
@@ -28,7 +31,7 @@ Write a fascinating historical fact.`;
       body: JSON.stringify({
         model: "minimaxai/minimax-m2.7",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.9,
+        temperature: 0.7,
         top_p: 0.9,
         max_tokens: 2048,
         stream: true

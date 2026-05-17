@@ -19,14 +19,13 @@ export default function Home() {
               <span className="text-[#FEFBE0] text-lg font-bold leading-7">Hello Explorer!</span>
             </div>
           </div>
-          <div className="relative">
-            <button className="w-11 h-11 flex items-center justify-center rounded-full border border-[#52B788]/15 bg-white/5">
-              <svg width="18" height="20" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8.86021 0C8.16881 0 7.61021 0.558593 7.61021 1.25V1.94922C4.77818 2.39843 2.61021 4.85157 2.61021 7.8125V9.11719C2.61021 10.8906 2.00474 12.6133 0.899273 13.9961L0.317242 14.7266C0.0906792 15.0078 0.0477105 15.3946 0.203961 15.7188C0.360211 16.043 0.688335 16.25 1.04771 16.25H16.6728C17.0321 16.25 17.3602 16.043 17.5164 15.7188C17.6728 15.3946 17.6298 15.0078 17.4032 14.7266L16.8212 14C15.7156 12.6133 15.1102 10.8906 15.1102 9.11719V7.8125C15.1102 4.85157 12.9422 2.39843 10.1102 1.94922V1.25C10.1102 0.558593 9.55162 0 8.86021 0ZM8.86021 3.75H9.17271C11.4149 3.75 13.2352 5.57031 13.2352 7.8125V9.11719C13.2352 10.9883 13.7782 12.8124 14.786 14.375H2.93443C3.94224 12.8124 4.48521 10.9883 4.48521 9.11719V7.8125C4.48521 5.57031 6.30553 3.75 8.54771 3.75H8.86021ZM11.3602 17.5H8.86021H6.36021C6.36021 18.1641 6.62193 18.8008 7.09068 19.2696C7.55943 19.7383 8.19615 20 8.86021 20C9.52427 20 10.161 19.7383 10.6297 19.2696C11.0985 18.8008 11.3602 18.1641 11.3602 17.5Z" fill="#FEFBE0"/>
-              </svg>
-            </button>
-            <div className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-[#F4A261] border-2 border-[#100E0A]" />
-          </div>
+          <Link to="/profile" className="w-11 h-11 rounded-full border-2 border-[#52B788]/30 overflow-hidden block">
+            <img
+              src="https://api.builder.io/api/v1/image/assets/TEMP/8ac6e4f2918cb1ade2b53e903533707e4b93794a?width=88"
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          </Link>
         </div>
 
         {/* Hero Section */}
