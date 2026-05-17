@@ -1,0 +1,8 @@
+{
+  "name": "HeritageLK",
+  "description": "Port of the HeritageLK project.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
