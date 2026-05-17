@@ -23,7 +23,7 @@ export default function Archive() {
           id: item.id,
           title: item.title,
           loc: item.location || "SRI LANKA",
-          category: item.subtitle?.toString().toLowerCase().includes("oral") ? "Oral History" : "Ancient Sites",
+          category: item.category || "All Records",
           icon: <BookOpen className="w-6 h-6 text-[#F4A261] fill-[#F4A261]/20" />
         }));
         setArchives(prev => [...dbArchives, ...prev.filter(p => !dbArchives.find(d => d.id === p.id))]);
