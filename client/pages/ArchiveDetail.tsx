@@ -162,7 +162,7 @@ Write a fascinating historical fact.
         content: fallbackMarkdown.trim(),
         images: ["https://images.unsplash.com/photo-1545657805-46eb13251a37?q=80&w=1000&auto=format&fit=crop"]
       });
-      setGenerateError(e?.message || "Failed to generate content. Showing placeholder.");
+      setGenerateError(e?.message || "Failed to generate AI content. Displaying fallback example.");
     } finally {
       setIsGenerating(false);
     }
