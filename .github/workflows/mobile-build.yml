@@ -12,6 +12,8 @@ jobs:
   android-apk:
     name: Build Android APK
     runs-on: ubuntu-latest
+    env:
+      SIGNING_ENABLED: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,12 +50,13 @@ jobs:
         run: corepack pnpm tauri:android:build
 
       - name: Decode Android signing keystore
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/release.keystore
+          chmod 600 /tmp/release.keystore
 
       - name: Sign APK
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        if: ${{ env.SIGNING_ENABLED == 'true' }}
         env:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -65,14 +68,18 @@ jobs:
             exit 1
           fi
 
-          BUILD_TOOLS_DIR="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)"
+          BUILD_TOOLS_DIR="$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1)"
+          if [ -z "$BUILD_TOOLS_DIR" ]; then
+            echo "Android build-tools not found under ANDROID_HOME=$ANDROID_HOME"
+            exit 1
+          fi
           SIGNED_APK="${APK_PATH%-unsigned.apk}-signed.apk"
 
           "$BUILD_TOOLS_DIR/apksigner" sign \
             --ks /tmp/release.keystore \
             --ks-key-alias "$ANDROID_KEY_ALIAS" \
-            --ks-pass "pass:$ANDROID_KEYSTORE_PASSWORD" \
-            --key-pass "pass:$ANDROID_KEY_PASSWORD" \
+            --ks-pass "env:ANDROID_KEYSTORE_PASSWORD" \
+            --key-pass "env:ANDROID_KEY_PASSWORD" \
             --out "$SIGNED_APK" \
             "$APK_PATH"
 
