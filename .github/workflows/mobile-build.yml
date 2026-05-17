@@ -63,20 +63,20 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          APK_PATH="$(find src-tauri/gen/android/app/build/outputs -type f -name '*-unsigned.apk' | head -n 1)"
+          APK_PATH="$(find src-tauri/gen/android/app/build/outputs -type f -name '*-unsigned.apk' | sort | head -n 1)"
           if [ -z "$APK_PATH" ]; then
             echo "No unsigned APK found to sign."
             exit 1
           fi
 
-          BUILD_TOOLS_DIR="$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -n 1)"
+          BUILD_TOOLS_DIR="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort | tail -n 1)"
           if [ -z "$BUILD_TOOLS_DIR" ]; then
             echo "Android build-tools not found under ANDROID_HOME=$ANDROID_HOME"
             exit 1
           fi
           APK_DIR="$(dirname "$APK_PATH")"
           APK_FILE="$(basename "$APK_PATH" .apk)"
-          APK_FILE_BASE="${APK_FILE/-unsigned/}"
+          APK_FILE_BASE="${APK_FILE//-unsigned/}"
           SIGNED_APK="$APK_DIR/${APK_FILE_BASE}-signed.apk"
 
           "$BUILD_TOOLS_DIR/apksigner" sign \
