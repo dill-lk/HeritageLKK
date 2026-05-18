@@ -19,6 +19,23 @@ export default function ArchiveDetail() {
   const getErrorMessage = (error: unknown) =>
     error instanceof Error ? error.message : "Failed to generate AI content.";
 
+  const resolveArchiveApiUrl = () => {
+    const configuredBase = import.meta.env.VITE_API_BASE_URL?.trim();
+    if (configuredBase) {
+      try {
+        return new URL("/api/generate-archive", configuredBase).toString();
+      } catch {
+        return null;
+      }
+    }
+
+    if (typeof window !== "undefined" && /^https?:$/i.test(window.location.protocol)) {
+      return "/api/generate-archive";
+    }
+
+    return null;
+  };
+
   useEffect(() => {
     async function fetchData() {
       if (isNew) return;
@@ -91,12 +108,15 @@ export default function ArchiveDetail() {
     setGenerateError("");
     setIsGenerating(true);
     try {
-      const res = await fetch("/api/generate-archive", {
+      const apiUrl = resolveArchiveApiUrl();
+      if (!apiUrl) {
+        throw new Error("Archive API is unavailable in this build. Configure VITE_API_BASE_URL.");
+      }
+
+      const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic })
-      }).catch(err => {
-        throw new Error("Network error: Could not reach the server.");
       });
       
       if (!res.ok) {
@@ -109,8 +129,6 @@ export default function ArchiveDetail() {
         }
         throw new Error(message || `Server returned ${res.status}`);
       }
-      if (!res.body) throw new Error("No readable stream");
-
       setData({
         title: topic,
         subtitle: "AI GENERATED ARCHIVE",
@@ -119,17 +137,21 @@ export default function ArchiveDetail() {
         images: ["https://images.unsplash.com/photo-1545657805-46eb13251a37?q=80&w=1000&auto=format&fit=crop"]
       });
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
       let streamedMarkdown = "";
+      if (res.body && typeof res.body.getReader === "function") {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        streamedMarkdown += chunk;
-        
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          streamedMarkdown += chunk;
+          setData((prev: any) => ({ ...prev, content: streamedMarkdown }));
+        }
+      } else {
+        streamedMarkdown = await res.text();
         setData((prev: any) => ({ ...prev, content: streamedMarkdown }));
       }
 
