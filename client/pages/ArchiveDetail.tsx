@@ -34,7 +34,7 @@ const resolveArchiveApiUrl = () => {
     }
   }
 
-  if (typeof window !== "undefined" && /^https?:$/i.test(window.location.protocol)) {
+  if (typeof window !== "undefined" && /^(http|https):$/.test(window.location.protocol)) {
     return "/api/generate-archive";
   }
 

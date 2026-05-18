@@ -2,6 +2,8 @@ import { GoogleGenAI } from "@google/genai";
 import { RequestHandler } from "express";
 
 const DEFAULT_TOPIC = "Sri Lankan Heritage";
+const GEMINI_TIMEOUT_MS = 15000;
+const NVIDIA_TIMEOUT_MS = 20000;
 const PLACEHOLDER_MARKERS = [
   "Write a brief engaging introduction.",
   "Write a detailed paragraph about the history and significance.",
@@ -103,7 +105,7 @@ Every section must contain finished content, not instructions.`;
     const response = await Promise.race([
       generationPromise,
       new Promise<never>((_, reject) => {
-        timeout = setTimeout(() => reject(new Error("Archive generation timed out")), 15000);
+        timeout = setTimeout(() => reject(new Error("Archive generation timed out")), GEMINI_TIMEOUT_MS);
       }),
     ]);
 
@@ -135,7 +137,7 @@ Detailed historical and cultural paragraph.
 One interesting fact paragraph.`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = setTimeout(() => controller.abort(), NVIDIA_TIMEOUT_MS);
 
   try {
     const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {

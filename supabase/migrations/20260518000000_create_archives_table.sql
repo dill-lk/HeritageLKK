@@ -60,9 +60,10 @@ create policy "archives_delete_own"
 -- ============================================================
 -- Optional: seed a couple of records so the list isn't empty
 -- ============================================================
-insert into public.archives (title, subtitle, location, category, intro, content)
+insert into public.archives (user_id, title, subtitle, location, category, intro, content)
 values
   (
+    null,
     'Traditional Mask Carving',
     'ANCIENT CRAFTSMANSHIP',
     'AMBALANGODA, SRI LANKA',
@@ -71,6 +72,7 @@ values
     null
   ),
   (
+    null,
     'Palm Leaf Manuscripts',
     'ORAL HISTORY',
     'SRI LANKA',
