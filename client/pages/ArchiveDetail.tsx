@@ -178,7 +178,9 @@ export default function ArchiveDetail() {
              title: newArchive.title, 
              subtitle: newArchive.subtitle,
              location: newArchive.location,
+             category: "AI Generated",
              intro: newArchive.intro,
+             content: newArchive.content,
              user_id: session?.user?.id 
           }])
           .select()
