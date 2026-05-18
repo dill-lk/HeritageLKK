@@ -91,7 +91,7 @@ export default function Archive() {
 
         {/* Featured Card */}
         <div className="px-5 mb-8">
-          <Link to="/archive/featured" className="block relative h-[240px] rounded-[32px] overflow-hidden border border-[#F4A261]/30">
+          <Link to="/archive/mask" className="block relative h-[240px] rounded-[32px] overflow-hidden border border-[#F4A261]/30">
             <img 
               src="https://images.unsplash.com/photo-1596706798032-9cb773b40bb0?q=80&w=2670&auto=format&fit=crop" 
               alt="Elder's Voice" 

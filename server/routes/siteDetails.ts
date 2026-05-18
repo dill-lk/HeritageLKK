@@ -14,6 +14,13 @@ function getAIClient() {
   return aiClient;
 }
 
+const buildFallbackSiteDetails = (siteName: string) => ({
+  description: `${siteName} is a notable Sri Lankan heritage location with cultural and historical value.`,
+  status: "Check local visiting hours",
+  ticketPrice: "Varies by visitor type",
+  bestTimeToVisit: "Morning or late afternoon",
+});
+
 export const handleSiteDetails: RequestHandler = async (req, res) => {
   try {
     const siteName = req.query.name as string;
@@ -35,16 +42,33 @@ Ensure the JSON is valid and can be directly parsed. No markdown fences.`;
 
     const ai = getAIClient();
     if (!ai) {
-      throw new Error("AI Client not initialized");
+      return res.json(buildFallbackSiteDetails(siteName));
     }
 
-    const response = await ai.models.generateContent({
+    const generationPromise = ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }]
       }
     });
+    let response: Awaited<typeof generationPromise>;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      response = await Promise.race([
+        generationPromise,
+        new Promise<never>((_, reject) =>
+          (timeout = setTimeout(
+            () => reject(new Error("Site details generation timed out")),
+            15000,
+          )),
+        ),
+      ]);
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
 
     const resultText = response.text || "{}";
     let details;
@@ -53,16 +77,17 @@ Ensure the JSON is valid and can be directly parsed. No markdown fences.`;
     } catch (e) {
       console.error("Failed to parse Gemini response", resultText);
       details = {
-        description: "Information currently unavailable.",
-        status: "Unknown",
-        ticketPrice: "Unknown",
-        bestTimeToVisit: "Unknown"
+        ...buildFallbackSiteDetails(siteName),
       };
     }
 
     res.json(details);
   } catch (error) {
     console.error("Error fetching site details:", error);
-    res.status(500).json({ error: "Failed to generate details" });
+    const siteName =
+      typeof req.query.name === "string" && req.query.name.trim()
+        ? req.query.name.trim()
+        : "this heritage site";
+    res.json(buildFallbackSiteDetails(siteName));
   }
 };

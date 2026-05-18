@@ -5,6 +5,42 @@ import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 import Markdown from "react-markdown";
 
+const AI_GENERATED_ARCHIVE_CATEGORY = "AI Generated";
+
+const buildArchiveFallbackMarkdown = (topic: string) => `# ${topic}
+## AI GENERATED ARCHIVE
+${topic} remains part of Sri Lanka's living cultural memory, shaped by place, storytelling, and the traditions that communities continue to carry forward.
+
+### The Heritage
+Across Sri Lanka, heritage survives through ritual, craftsmanship, oral history, and regional identity. ${topic} can be understood not only as a historical subject, but as part of a wider cultural landscape where memory is preserved through everyday practice, local pride, and intergenerational knowledge.
+
+### Did you know?
+Many Sri Lankan traditions were preserved for centuries through temple records, artisan families, and spoken history long before they were formally documented in modern archives.`;
+
+const hasArchivePlaceholderContent = (content: string) =>
+  [
+    "Write a brief engaging introduction.",
+    "Write a detailed paragraph about the history and significance.",
+    "Write a fascinating historical fact.",
+  ].some((marker) => content.includes(marker));
+
+const resolveArchiveApiUrl = () => {
+  const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+  if (configuredApiBaseUrl) {
+    try {
+      return new URL("/api/generate-archive", configuredApiBaseUrl).toString();
+    } catch {
+      return null;
+    }
+  }
+
+  if (typeof window !== "undefined" && /^(http|https):$/.test(window.location.protocol)) {
+    return "/api/generate-archive";
+  }
+
+  return null;
+};
+
 export default function ArchiveDetail() {
   const { id } = useParams();
   const isNew = id === "new";
@@ -91,12 +127,16 @@ export default function ArchiveDetail() {
     setGenerateError("");
     setIsGenerating(true);
     try {
-      const res = await fetch("/api/generate-archive", {
+      const apiUrl = resolveArchiveApiUrl();
+      if (!apiUrl) {
+        console.warn("Archive API URL unavailable. Set VITE_API_BASE_URL for non-http app hosts.");
+        throw new Error("Archive generation is currently unavailable. Please try again later.");
+      }
+
+      const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic })
-      }).catch(err => {
-        throw new Error("Network error: Could not reach the server.");
       });
       
       if (!res.ok) {
@@ -109,8 +149,6 @@ export default function ArchiveDetail() {
         }
         throw new Error(message || `Server returned ${res.status}`);
       }
-      if (!res.body) throw new Error("No readable stream");
-
       setData({
         title: topic,
         subtitle: "AI GENERATED ARCHIVE",
@@ -119,28 +157,38 @@ export default function ArchiveDetail() {
         images: ["https://images.unsplash.com/photo-1545657805-46eb13251a37?q=80&w=1000&auto=format&fit=crop"]
       });
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
       let streamedMarkdown = "";
+      if (res.body && typeof res.body.getReader === "function") {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        streamedMarkdown += chunk;
-        
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          streamedMarkdown += chunk;
+          setData((prev: any) => ({ ...prev, content: streamedMarkdown }));
+        }
+      } else {
+        streamedMarkdown = await res.text();
         setData((prev: any) => ({ ...prev, content: streamedMarkdown }));
       }
 
       if (!streamedMarkdown.trim()) {
         throw new Error("The AI service returned an empty response.");
       }
+
+      if (hasArchivePlaceholderContent(streamedMarkdown)) {
+        streamedMarkdown = buildArchiveFallbackMarkdown(topic);
+        setData((prev: any) => ({ ...prev, content: streamedMarkdown }));
+      }
       
       const newArchive = {
         title: topic,
         subtitle: "AI GENERATED ARCHIVE",
         location: "SRI LANKA (AI ESTIMATED)",
+        category: AI_GENERATED_ARCHIVE_CATEGORY,
         intro: streamedMarkdown, // We'll store markdown text in "intro" so supabase schema isn't fully broken
         content: streamedMarkdown,
         images: ["https://images.unsplash.com/photo-1545657805-46eb13251a37?q=80&w=1000&auto=format&fit=crop"]
@@ -151,13 +199,15 @@ export default function ArchiveDetail() {
         
         const { data: insertedData, error } = await supabase
           .from("archives")
-          .insert([{ 
-             title: newArchive.title, 
-             subtitle: newArchive.subtitle,
-             location: newArchive.location,
-             intro: newArchive.intro,
-             user_id: session?.user?.id 
-          }])
+           .insert([{ 
+              title: newArchive.title, 
+              subtitle: newArchive.subtitle,
+              location: newArchive.location,
+              category: newArchive.category,
+              intro: newArchive.intro,
+              content: newArchive.content,
+              user_id: session?.user?.id 
+           }])
           .select()
           .single();
           
@@ -170,15 +220,7 @@ export default function ArchiveDetail() {
       console.error("Archive Generation Error:", e);
       
       // Fallback if API fails
-      const fallbackMarkdown = `
-# ${topic}
-## AI GENERATED ARCHIVE
-Write a brief engaging introduction.
-### The Heritage
-Write a detailed paragraph about the history and significance.
-### Did you know?
-Write a fascinating historical fact.
-      `;
+      const fallbackMarkdown = buildArchiveFallbackMarkdown(topic);
       setData({
         title: topic,
         subtitle: "AI GENERATED ARCHIVE",
