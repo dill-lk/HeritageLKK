@@ -1,6 +1,8 @@
 import { RequestHandler } from "express";
 
 const DEFAULT_TOPIC = "Sri Lankan Heritage";
+const getRequestTopic = (req: Parameters<RequestHandler>[0]) =>
+  typeof req.body?.topic === "string" ? req.body.topic.trim() : "";
 
 const buildFallbackArchive = (topic: string) => `# ${topic}
 ## AI GENERATED ARCHIVE
@@ -37,7 +39,7 @@ const tryWriteSseContentLine = (line: string, write: (content: string) => void) 
 
 export const handleGenerateArchive: RequestHandler = async (req, res) => {
   try {
-    const topic = typeof req.body?.topic === "string" ? req.body.topic.trim() : "";
+    const topic = getRequestTopic(req);
     if (!topic) {
       return res.status(400).json({ error: "Topic is required" });
     }
@@ -135,11 +137,11 @@ Write a fascinating historical fact.`;
     res.end();
   } catch (error) {
     console.error("Generate archive error:", error);
-    const topic = typeof req.body?.topic === "string" ? req.body.topic.trim() : DEFAULT_TOPIC;
+    const topic = getRequestTopic(req) || DEFAULT_TOPIC;
     if (res.headersSent) {
       res.end();
       return;
     }
-    writeFallbackArchive(res, topic || DEFAULT_TOPIC);
+    writeFallbackArchive(res, topic);
   }
 };
