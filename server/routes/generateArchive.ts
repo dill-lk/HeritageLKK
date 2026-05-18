@@ -1,18 +1,50 @@
+import { GoogleGenAI } from "@google/genai";
 import { RequestHandler } from "express";
 
 const DEFAULT_TOPIC = "Sri Lankan Heritage";
+const PLACEHOLDER_MARKERS = [
+  "Write a brief engaging introduction.",
+  "Write a detailed paragraph about the history and significance.",
+  "Write a fascinating historical fact.",
+];
+
+let geminiClient: GoogleGenAI | null = null;
+
 const getRequestTopic = (req: Parameters<RequestHandler>[0]) =>
   typeof req.body?.topic === "string" ? req.body.topic.trim() : "";
 
+const getGeminiClient = () => {
+  if (!process.env.GEMINI_API_KEY) {
+    return null;
+  }
+
+  if (!geminiClient) {
+    geminiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+
+  return geminiClient;
+};
+
 const buildFallbackArchive = (topic: string) => `# ${topic}
 ## AI GENERATED ARCHIVE
-${topic} is a culturally significant part of Sri Lankan heritage, with stories and traditions carried across generations.
+${topic} carries layers of memory, place, and tradition within Sri Lanka's cultural landscape. Stories about ${topic} survive through local practice, family knowledge, and the way communities continue to speak about it today.
 
 ### The Heritage
-Historical records, oral traditions, and local practices connect ${topic} to wider social, artistic, and spiritual life in Sri Lanka. Its continued preservation helps communities maintain identity, language, and ritual memory.
+Historical records, oral traditions, and everyday community practices connect ${topic} to Sri Lanka's wider artistic, social, and spiritual life. Whether preserved through ritual, craft, storytelling, or regional identity, ${topic} reflects how heritage is carried forward not only in monuments, but in living memory. Its continued preservation helps communities maintain identity, strengthen intergenerational ties, and protect knowledge that might otherwise disappear.
 
 ### Did you know?
-Many Sri Lankan heritage traditions were historically preserved through temple chronicles, craft guilds, and family-based knowledge transfer.`;
+Many Sri Lankan heritage traditions were historically preserved through temple chronicles, village storytellers, artisan lineages, and family-based knowledge transfer rather than a single written archive.`;
+
+const normalizeArchiveMarkdown = (text: string, topic: string) => {
+  const normalized = text.replace(/```markdown/g, "").replace(/```/g, "").trim();
+  const hasPlaceholderContent = PLACEHOLDER_MARKERS.some((marker) => normalized.includes(marker));
+
+  if (!normalized || hasPlaceholderContent) {
+    return buildFallbackArchive(topic);
+  }
+
+  return normalized;
+};
 
 const writeFallbackArchive = (res: Parameters<RequestHandler>[1], topic: string) => {
   res.status(200).setHeader("Content-Type", "text/plain; charset=utf-8");
@@ -37,63 +69,99 @@ const tryWriteSseContentLine = (line: string, write: (content: string) => void) 
   }
 };
 
-export const handleGenerateArchive: RequestHandler = async (req, res) => {
-  try {
-    const topic = getRequestTopic(req);
-    if (!topic) {
-      return res.status(400).json({ error: "Topic is required" });
-    }
+const generateWithGemini = async (topic: string) => {
+  const ai = getGeminiClient();
+  if (!ai) {
+    return null;
+  }
 
-    const apiKey = process.env.NVIDIA_API_KEY;
-    if (!apiKey) {
-      console.warn("NVIDIA_API_KEY is not configured. Returning fallback archive content.");
-      return writeFallbackArchive(res, topic);
-    }
+  const prompt = `You are a heritage archivist for Sri Lanka. Write a polished archive article about "${topic}".
 
-    const prompt = `You are a heritage archivist for Sri Lanka. Generate an engaging archive article about "${topic}".
-Format as Markdown with the following structure:
-# Title
-## Subtitle
-Write a brief engaging introduction.
+Return plain Markdown only. Do not include code fences. Do not repeat these instructions. Do not use placeholder sentences.
+
+Required structure:
+# ${topic}
+## AI GENERATED ARCHIVE
+Write one vivid introductory paragraph about the place, tradition, or subject.
+
 ### The Heritage
-Write a detailed paragraph about the history and significance.
-### Did you know?
-Write a fascinating historical fact.`;
+Write one substantial paragraph explaining the history, cultural significance, and Sri Lankan context.
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
-    let response: Response;
-    try {
-      response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "minimaxai/minimax-m2.7",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.9,
-          top_p: 0.9,
-          max_tokens: 2048,
-          stream: true
-        }),
-        signal: controller.signal,
-      });
-    } finally {
+### Did you know?
+Write one interesting fact as a short paragraph.
+
+Every section must contain finished content, not instructions.`;
+
+  const generationPromise = ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+  });
+
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    const response = await Promise.race([
+      generationPromise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error("Archive generation timed out")), 15000);
+      }),
+    ]);
+
+    return normalizeArchiveMarkdown(response.text || "", topic);
+  } finally {
+    if (timeout) {
       clearTimeout(timeout);
     }
+  }
+};
+
+const generateWithNvidia = async (topic: string) => {
+  const apiKey = process.env.NVIDIA_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  const prompt = `You are a heritage archivist for Sri Lanka. Write a polished archive article about "${topic}".
+Return plain Markdown only with completed prose, not instructions.
+
+# ${topic}
+## AI GENERATED ARCHIVE
+Intro paragraph.
+
+### The Heritage
+Detailed historical and cultural paragraph.
+
+### Did you know?
+One interesting fact paragraph.`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+
+  try {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "minimaxai/minimax-m2.7",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        top_p: 0.9,
+        max_tokens: 2048,
+        stream: true
+      }),
+      signal: controller.signal,
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("NVIDIA API error:", errorText);
-      return writeFallbackArchive(res, topic);
+      return null;
     }
 
-    res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    res.setHeader("Transfer-Encoding", "chunked");
-
-    let wroteAnyContent = false;
+    let content = "";
 
     if (response.body && typeof (response.body as any).getReader === "function") {
       const reader = (response.body as any).getReader();
@@ -109,39 +177,40 @@ Write a fascinating historical fact.`;
         pending = lines.pop() ?? "";
 
         for (const line of lines) {
-          tryWriteSseContentLine(line, (content) => {
-            res.write(content);
-            wroteAnyContent = true;
+          tryWriteSseContentLine(line, (chunk) => {
+            content += chunk;
           });
         }
       }
 
       if (pending) {
-        tryWriteSseContentLine(pending, (content) => {
-          res.write(content);
-          wroteAnyContent = true;
+        tryWriteSseContentLine(pending, (chunk) => {
+          content += chunk;
         });
       }
     } else if (response.body) {
-      const content = await response.text();
-      if (content.trim()) {
-        res.write(content);
-        wroteAnyContent = true;
-      }
+      content = await response.text();
     }
 
-    if (!wroteAnyContent) {
-      res.write(buildFallbackArchive(topic));
+    return normalizeArchiveMarkdown(content, topic);
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+export const handleGenerateArchive: RequestHandler = async (req, res) => {
+  try {
+    const topic = getRequestTopic(req);
+    if (!topic) {
+      return res.status(400).json({ error: "Topic is required" });
     }
-    
-    res.end();
+
+    const content = (await generateWithGemini(topic)) ?? (await generateWithNvidia(topic)) ?? buildFallbackArchive(topic);
+    res.status(200).setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.send(content);
   } catch (error) {
     console.error("Generate archive error:", error);
     const topic = getRequestTopic(req) || DEFAULT_TOPIC;
-    if (res.headersSent) {
-      res.end();
-      return;
-    }
     writeFallbackArchive(res, topic);
   }
 };

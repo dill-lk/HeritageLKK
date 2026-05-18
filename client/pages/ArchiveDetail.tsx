@@ -5,6 +5,25 @@ import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 import Markdown from "react-markdown";
 
+const AI_GENERATED_CATEGORY = "AI Generated";
+
+const buildArchiveFallbackMarkdown = (topic: string) => `# ${topic}
+## AI GENERATED ARCHIVE
+${topic} remains part of Sri Lanka's living cultural memory, shaped by place, storytelling, and the traditions that communities continue to carry forward.
+
+### The Heritage
+Across Sri Lanka, heritage survives through ritual, craftsmanship, oral history, and regional identity. ${topic} can be understood not only as a historical subject, but as part of a wider cultural landscape where memory is preserved through everyday practice, local pride, and intergenerational knowledge.
+
+### Did you know?
+Many Sri Lankan traditions were preserved for centuries through temple records, artisan families, and spoken history long before they were formally documented in modern archives.`;
+
+const hasArchivePlaceholderContent = (content: string) =>
+  [
+    "Write a brief engaging introduction.",
+    "Write a detailed paragraph about the history and significance.",
+    "Write a fascinating historical fact.",
+  ].some((marker) => content.includes(marker));
+
 const resolveArchiveApiUrl = () => {
   const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
   if (configuredApiBaseUrl) {
@@ -159,6 +178,11 @@ export default function ArchiveDetail() {
       if (!streamedMarkdown.trim()) {
         throw new Error("The AI service returned an empty response.");
       }
+
+      if (hasArchivePlaceholderContent(streamedMarkdown)) {
+        streamedMarkdown = buildArchiveFallbackMarkdown(topic);
+        setData((prev: any) => ({ ...prev, content: streamedMarkdown }));
+      }
       
       const newArchive = {
         title: topic,
@@ -174,15 +198,15 @@ export default function ArchiveDetail() {
         
         const { data: insertedData, error } = await supabase
           .from("archives")
-          .insert([{ 
-             title: newArchive.title, 
-             subtitle: newArchive.subtitle,
-             location: newArchive.location,
-             category: "AI Generated",
-             intro: newArchive.intro,
-             content: newArchive.content,
-             user_id: session?.user?.id 
-          }])
+           .insert([{ 
+              title: newArchive.title, 
+              subtitle: newArchive.subtitle,
+              location: newArchive.location,
+              category: AI_GENERATED_CATEGORY,
+              intro: newArchive.intro,
+              content: newArchive.content,
+              user_id: session?.user?.id 
+           }])
           .select()
           .single();
           
@@ -195,15 +219,7 @@ export default function ArchiveDetail() {
       console.error("Archive Generation Error:", e);
       
       // Fallback if API fails
-      const fallbackMarkdown = `
-# ${topic}
-## AI GENERATED ARCHIVE
-Write a brief engaging introduction.
-### The Heritage
-Write a detailed paragraph about the history and significance.
-### Did you know?
-Write a fascinating historical fact.
-      `;
+      const fallbackMarkdown = buildArchiveFallbackMarkdown(topic);
       setData({
         title: topic,
         subtitle: "AI GENERATED ARCHIVE",
