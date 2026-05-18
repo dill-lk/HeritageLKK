@@ -5,6 +5,23 @@ import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 import Markdown from "react-markdown";
 
+const resolveArchiveApiUrl = () => {
+  const configuredBase = import.meta.env.VITE_API_BASE_URL?.trim();
+  if (configuredBase) {
+    try {
+      return new URL("/api/generate-archive", configuredBase).toString();
+    } catch {
+      return null;
+    }
+  }
+
+  if (typeof window !== "undefined" && /^https?:$/i.test(window.location.protocol)) {
+    return "/api/generate-archive";
+  }
+
+  return null;
+};
+
 export default function ArchiveDetail() {
   const { id } = useParams();
   const isNew = id === "new";
@@ -18,23 +35,6 @@ export default function ArchiveDetail() {
 
   const getErrorMessage = (error: unknown) =>
     error instanceof Error ? error.message : "Failed to generate AI content.";
-
-  const resolveArchiveApiUrl = () => {
-    const configuredBase = import.meta.env.VITE_API_BASE_URL?.trim();
-    if (configuredBase) {
-      try {
-        return new URL("/api/generate-archive", configuredBase).toString();
-      } catch {
-        return null;
-      }
-    }
-
-    if (typeof window !== "undefined" && /^https?:$/i.test(window.location.protocol)) {
-      return "/api/generate-archive";
-    }
-
-    return null;
-  };
 
   useEffect(() => {
     async function fetchData() {
