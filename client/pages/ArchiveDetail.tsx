@@ -6,10 +6,10 @@ import { supabase } from "@/lib/supabase";
 import Markdown from "react-markdown";
 
 const resolveArchiveApiUrl = () => {
-  const configuredBase = import.meta.env.VITE_API_BASE_URL?.trim();
-  if (configuredBase) {
+  const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+  if (configuredApiBaseUrl) {
     try {
-      return new URL("/api/generate-archive", configuredBase).toString();
+      return new URL("/api/generate-archive", configuredApiBaseUrl).toString();
     } catch {
       return null;
     }
@@ -110,7 +110,7 @@ export default function ArchiveDetail() {
     try {
       const apiUrl = resolveArchiveApiUrl();
       if (!apiUrl) {
-        throw new Error("Archive API is unavailable in this build. Configure VITE_API_BASE_URL.");
+        throw new Error("Archive API is unavailable in this build. Configure VITE_API_BASE_URL in your environment variables.");
       }
 
       const res = await fetch(apiUrl, {
