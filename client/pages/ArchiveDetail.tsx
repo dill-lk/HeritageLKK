@@ -5,7 +5,7 @@ import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 import Markdown from "react-markdown";
 
-const AI_GENERATED_CATEGORY = "AI Generated";
+const AI_GENERATED_ARCHIVE_CATEGORY = "AI Generated";
 
 const buildArchiveFallbackMarkdown = (topic: string) => `# ${topic}
 ## AI GENERATED ARCHIVE
@@ -188,7 +188,7 @@ export default function ArchiveDetail() {
         title: topic,
         subtitle: "AI GENERATED ARCHIVE",
         location: "SRI LANKA (AI ESTIMATED)",
-        category: AI_GENERATED_CATEGORY,
+        category: AI_GENERATED_ARCHIVE_CATEGORY,
         intro: streamedMarkdown, // We'll store markdown text in "intro" so supabase schema isn't fully broken
         content: streamedMarkdown,
         images: ["https://images.unsplash.com/photo-1545657805-46eb13251a37?q=80&w=1000&auto=format&fit=crop"]

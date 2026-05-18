@@ -17,7 +17,7 @@ create table if not exists public.archives (
   subtitle    text,
   location    text,
   category    text,
-  intro       text,   -- short intro / italic quote
+  intro       text,   -- intro text or legacy markdown body for older/generated entries
   content     text    -- full markdown body (AI-generated archives)
 );
 
