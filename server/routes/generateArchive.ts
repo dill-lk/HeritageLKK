@@ -97,6 +97,9 @@ Every section must contain finished content, not instructions.`;
   const generationPromise = ai.models.generateContent({
     model: "gemini-2.5-flash",
     contents: prompt,
+    config: {
+      temperature: 0.7,
+    },
   });
 
   let timeout: ReturnType<typeof setTimeout> | undefined;

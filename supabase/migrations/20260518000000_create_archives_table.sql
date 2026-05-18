@@ -9,7 +9,7 @@ create table if not exists public.archives (
   id          uuid        primary key default gen_random_uuid(),
   created_at  timestamptz not null    default now(),
 
-  -- owner (nullable so anonymous AI-generated archives still work)
+  -- owner (nullable; null for anonymous/system-created records, populated for signed-in user-created records)
   user_id     uuid        references auth.users(id) on delete set null,
 
   -- content fields
