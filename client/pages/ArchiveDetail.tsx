@@ -110,7 +110,8 @@ export default function ArchiveDetail() {
     try {
       const apiUrl = resolveArchiveApiUrl();
       if (!apiUrl) {
-        throw new Error("Archive API is unavailable in this build. Configure VITE_API_BASE_URL in your environment variables.");
+        console.warn("Archive API URL unavailable. Set VITE_API_BASE_URL for non-http app hosts.");
+        throw new Error("Archive generation is currently unavailable. Please try again later.");
       }
 
       const res = await fetch(apiUrl, {

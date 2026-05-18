@@ -1,5 +1,7 @@
 import { RequestHandler } from "express";
 
+const DEFAULT_TOPIC = "Sri Lankan Heritage";
+
 const buildFallbackArchive = (topic: string) => `# ${topic}
 ## AI GENERATED ARCHIVE
 ${topic} is a culturally significant part of Sri Lankan heritage, with stories and traditions carried across generations.
@@ -133,11 +135,11 @@ Write a fascinating historical fact.`;
     res.end();
   } catch (error) {
     console.error("Generate archive error:", error);
-    const topic = typeof req.body?.topic === "string" ? req.body.topic.trim() : "Sri Lankan Heritage";
+    const topic = typeof req.body?.topic === "string" ? req.body.topic.trim() : DEFAULT_TOPIC;
     if (res.headersSent) {
       res.end();
       return;
     }
-    writeFallbackArchive(res, topic || "Sri Lankan Heritage");
+    writeFallbackArchive(res, topic || DEFAULT_TOPIC);
   }
 };

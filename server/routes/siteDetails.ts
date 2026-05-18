@@ -52,12 +52,23 @@ Ensure the JSON is valid and can be directly parsed. No markdown fences.`;
         tools: [{ googleSearch: {} }]
       }
     });
-    const response = await Promise.race([
-      generationPromise,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Site details generation timed out")), 15000),
-      ),
-    ]);
+    let response: Awaited<typeof generationPromise>;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      response = await Promise.race([
+        generationPromise,
+        new Promise<never>((_, reject) =>
+          (timeout = setTimeout(
+            () => reject(new Error("Site details generation timed out")),
+            15000,
+          )),
+        ),
+      ]);
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
 
     const resultText = response.text || "{}";
     let details;
