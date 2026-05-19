@@ -4,8 +4,39 @@ import { getProviderApiKey } from "../lib/providerApiKeys";
 
 export const handleShingoChat: RequestHandler = async (req, res) => {
   try {
-    const messages = req.body?.messages;
-    if (!messages || !Array.isArray(messages)) {
+    const rawMessages = req.body?.messages;
+    const rawMessage = req.body?.message;
+
+    const messages = Array.isArray(rawMessages)
+      ? rawMessages
+      : typeof rawMessage === "string" && rawMessage.trim()
+        ? [{ role: "user", content: rawMessage.trim() }]
+        : rawMessage &&
+            typeof rawMessage === "object" &&
+            typeof rawMessage.content === "string" &&
+            rawMessage.content.trim()
+          ? [
+              {
+                role: rawMessage.role === "assistant" ? "assistant" : "user",
+                content: rawMessage.content.trim(),
+              },
+            ]
+          : null;
+
+    if (!messages) {
+      return res.status(400).json({ error: "Messages array is required" });
+    }
+
+    const normalizedMessages = messages.filter(
+      (message) =>
+        message &&
+        typeof message === "object" &&
+        (message.role === "user" || message.role === "assistant") &&
+        typeof message.content === "string" &&
+        message.content.trim().length > 0,
+    );
+
+    if (normalizedMessages.length === 0) {
       return res.status(400).json({ error: "Messages array is required" });
     }
 
@@ -15,7 +46,7 @@ export const handleShingoChat: RequestHandler = async (req, res) => {
     
     const formattedMessages: any = [
       { role: "system", content: systemPrompt },
-      ...messages.map(m => ({ 
+      ...normalizedMessages.map(m => ({ 
         role: m.role === 'user' ? 'user' : 'assistant', 
         content: m.content 
       }))
