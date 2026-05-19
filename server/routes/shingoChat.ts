@@ -2,14 +2,26 @@ import { RequestHandler } from "express";
 import OpenAI from "openai";
 import { getProviderApiKey } from "../lib/providerApiKeys";
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export const handleShingoChat: RequestHandler = async (req, res) => {
   try {
     const rawMessages = req.body?.messages;
     const rawMessage = req.body?.message;
 
-    let messages: any[] | null = null;
+    let messages: ChatMessage[] | null = null;
     if (Array.isArray(rawMessages)) {
-      messages = rawMessages;
+      messages = rawMessages.filter(
+        (message): message is ChatMessage =>
+          message &&
+          typeof message === "object" &&
+          (message.role === "user" || message.role === "assistant") &&
+          typeof message.content === "string" &&
+          message.content.trim().length > 0,
+      );
     } else if (typeof rawMessage === "string" && rawMessage.trim()) {
       messages = [{ role: "user", content: rawMessage.trim() }];
     } else if (
@@ -30,16 +42,7 @@ export const handleShingoChat: RequestHandler = async (req, res) => {
       return res.status(400).json({ error: "Valid message or messages array is required" });
     }
 
-    const normalizedMessages = messages.filter(
-      (message) =>
-        message &&
-        typeof message === "object" &&
-        (message.role === "user" || message.role === "assistant") &&
-        typeof message.content === "string" &&
-        message.content.trim().length > 0,
-    );
-
-    if (normalizedMessages.length === 0) {
+    if (messages.length === 0) {
       return res.status(400).json({ error: "At least one valid message is required" });
     }
 
@@ -49,10 +52,7 @@ export const handleShingoChat: RequestHandler = async (req, res) => {
     
     const formattedMessages: any = [
       { role: "system", content: systemPrompt },
-      ...normalizedMessages.map(m => ({ 
-        role: m.role === 'user' ? 'user' : 'assistant', 
-        content: m.content 
-      }))
+      ...messages
     ];
 
     const client = new OpenAI({
