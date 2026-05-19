@@ -1,35 +1,43 @@
 import { createClient } from "@supabase/supabase-js";
+import { getRequiredServerSupabaseConfig } from "./supabase";
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let supabaseAdmin: ReturnType<typeof createClient> | null = null;
 
-const isConfigured = Boolean(supabaseUrl && supabaseServiceRoleKey);
-
-const supabaseAdmin = isConfigured
-  ? createClient(supabaseUrl!, supabaseServiceRoleKey!, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    })
-  : null;
-
-export const getProviderApiKey = async (provider: string) => {
-  if (!supabaseAdmin) {
-    throw new Error("Server key store is not configured (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required)");
+const getSupabaseAdmin = () => {
+  if (supabaseAdmin) {
+    return supabaseAdmin;
+  }
+  const { supabaseUrl } = getRequiredServerSupabaseConfig();
+  if (!supabaseServiceRoleKey) {
+    throw new Error("Server key store is not configured (SUPABASE_SERVICE_ROLE_KEY required)");
   }
 
+  supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  return supabaseAdmin;
+};
+
+export const getProviderApiKey = async (provider: string) => {
+  const adminClient = getSupabaseAdmin();
+
   const normalizedProvider = provider.trim().toLowerCase();
-  const { data, error } = await supabaseAdmin
-    .schema("private")
-    .from("api_keys")
+  const { data, error } = await adminClient
+    .from("private.api_keys")
     .select("api_key")
     .eq("provider", normalizedProvider)
-    .single();
+    .maybeSingle();
 
-  if (error || !data?.api_key) {
+  const apiKey = (data as unknown as { api_key?: string } | null)?.api_key;
+
+  if (error || !apiKey) {
     throw new Error(`Missing API key for provider: ${normalizedProvider}`);
   }
 
-  return data.api_key;
+  return apiKey;
 };

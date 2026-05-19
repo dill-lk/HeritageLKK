@@ -3,6 +3,7 @@ create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 
 create table if not exists private.api_keys (
+  -- Store provider names in lowercase (e.g. 'gemini', 'nvidia', 'openai')
   provider text primary key,
   api_key text not null,
   updated_at timestamptz not null default now()

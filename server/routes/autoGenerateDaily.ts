@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
-import { supabaseServer } from "../lib/supabase";
+import { getRequiredServerSupabaseConfig, supabaseServer } from "../lib/supabase";
 import { getProviderApiKey } from "../lib/providerApiKeys";
 
 import { createClient } from "@supabase/supabase-js";
@@ -19,11 +19,7 @@ export const generateDailyArchive = async (token?: string) => {
         let client = supabaseServer;
         let userId = null;
         if (token) {
-           const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-           const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
-           if (!supabaseUrl || !supabaseAnonKey) {
-             return { error: "Supabase URL/anon key not configured on the server" };
-           }
+           const { supabaseUrl, supabaseAnonKey } = getRequiredServerSupabaseConfig();
            client = createClient(
              supabaseUrl,
              supabaseAnonKey,

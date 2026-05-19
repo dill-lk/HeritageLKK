@@ -14,11 +14,13 @@ View your app in AI Studio: https://ai.studio/apps/efe95422-916a-4f3c-9137-34d15
 
 
 1. Install dependencies:
+   `corepack enable`
    `corepack pnpm install`
 2. Configure Supabase env values in `.env`:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
    - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY` (server only, never expose to client/Tauri)
 3. Apply SQL in `supabase/sql/provider_api_keys.sql` to create the private key store table.
 4. Insert provider keys (e.g. `gemini`, `nvidia`) into `private.api_keys`.
