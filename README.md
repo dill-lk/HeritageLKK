@@ -22,6 +22,7 @@ View your app in AI Studio: https://ai.studio/apps/efe95422-916a-4f3c-9137-34d15
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY` (server only, never expose to client/Tauri)
+   - `NVIDIA_API_KEY` (optional server-side fallback for Shingo/Archive generation)
 3. Apply SQL in `supabase/sql/provider_api_keys.sql` to create the private key store table.
 4. Insert provider keys (e.g. `gemini`, `nvidia`) into `private.api_keys`.
 5. Run the app:

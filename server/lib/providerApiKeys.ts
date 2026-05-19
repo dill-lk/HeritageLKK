@@ -24,9 +24,24 @@ const getSupabaseAdmin = () => {
 };
 
 export const getProviderApiKey = async (provider: string) => {
-  const adminClient = getSupabaseAdmin();
-
   const normalizedProvider = provider.trim().toLowerCase();
+  const providerEnvKeyName = `${normalizedProvider.replace(/[^a-z0-9]/g, "_").toUpperCase()}_API_KEY`;
+  const envApiKey = process.env[providerEnvKeyName]?.trim();
+
+  // Prefer direct server env key when present (simple and robust for local/dev).
+  if (envApiKey) {
+    return envApiKey;
+  }
+
+  let adminClient: ReturnType<typeof createClient>;
+  try {
+    adminClient = getSupabaseAdmin();
+  } catch {
+    throw new Error(
+      `Missing API key for provider: ${normalizedProvider}. Set ${providerEnvKeyName} or configure SUPABASE_SERVICE_ROLE_KEY with private.api_keys.`,
+    );
+  }
+
   const { data, error } = await adminClient
     .from("private.api_keys")
     .select("api_key")
@@ -36,7 +51,9 @@ export const getProviderApiKey = async (provider: string) => {
   const apiKey = (data as unknown as { api_key?: string } | null)?.api_key;
 
   if (error || !apiKey) {
-    throw new Error(`Missing API key for provider: ${normalizedProvider}`);
+    throw new Error(
+      `Missing API key for provider: ${normalizedProvider}. Set ${providerEnvKeyName} or add '${normalizedProvider}' to private.api_keys.`,
+    );
   }
 
   return apiKey;

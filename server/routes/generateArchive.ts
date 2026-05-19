@@ -54,6 +54,7 @@ Format exactly as Markdown with the following structure:
     res.end();
   } catch (error) {
     console.error("Generate archive error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    const message = error instanceof Error ? error.message : "Internal server error";
+    res.status(500).json({ error: message });
   }
 };

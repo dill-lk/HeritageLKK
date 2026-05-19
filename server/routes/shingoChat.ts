@@ -55,6 +55,7 @@ export const handleShingoChat: RequestHandler = async (req, res) => {
     res.end();
   } catch (error) {
     console.error("Shingo AI chat error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    const message = error instanceof Error ? error.message : "Internal server error";
+    res.status(500).json({ error: message });
   }
 };
