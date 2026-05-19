@@ -7,24 +7,27 @@ export const handleShingoChat: RequestHandler = async (req, res) => {
     const rawMessages = req.body?.messages;
     const rawMessage = req.body?.message;
 
-    const messages = Array.isArray(rawMessages)
-      ? rawMessages
-      : typeof rawMessage === "string" && rawMessage.trim()
-        ? [{ role: "user", content: rawMessage.trim() }]
-        : rawMessage &&
-            typeof rawMessage === "object" &&
-            typeof rawMessage.content === "string" &&
-            rawMessage.content.trim()
-          ? [
-              {
-                role: rawMessage.role === "assistant" ? "assistant" : "user",
-                content: rawMessage.content.trim(),
-              },
-            ]
-          : null;
+    let messages: any[] | null = null;
+    if (Array.isArray(rawMessages)) {
+      messages = rawMessages;
+    } else if (typeof rawMessage === "string" && rawMessage.trim()) {
+      messages = [{ role: "user", content: rawMessage.trim() }];
+    } else if (
+      rawMessage &&
+      typeof rawMessage === "object" &&
+      typeof rawMessage.content === "string" &&
+      rawMessage.content.trim()
+    ) {
+      messages = [
+        {
+          role: rawMessage.role === "assistant" ? "assistant" : "user",
+          content: rawMessage.content.trim(),
+        },
+      ];
+    }
 
     if (!messages) {
-      return res.status(400).json({ error: "Messages array is required" });
+      return res.status(400).json({ error: "Valid message or messages array is required" });
     }
 
     const normalizedMessages = messages.filter(
@@ -37,7 +40,7 @@ export const handleShingoChat: RequestHandler = async (req, res) => {
     );
 
     if (normalizedMessages.length === 0) {
-      return res.status(400).json({ error: "Messages array is required" });
+      return res.status(400).json({ error: "At least one valid message is required" });
     }
 
     const apiKey = await getProviderApiKey("nvidia");
