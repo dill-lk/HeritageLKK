@@ -1,33 +1,28 @@
 import { RequestHandler } from "express";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
-import { supabaseServer } from "../lib/supabase";
+import { getRequiredServerSupabaseConfig, supabaseServer } from "../lib/supabase";
+import { getProviderApiKey } from "../lib/providerApiKeys";
 
 import { createClient } from "@supabase/supabase-js";
 
 export const generateDailyArchive = async (token?: string) => {
     try {
-        if (!process.env.GEMINI_API_KEY) {
-            console.error("Auto Gen: GEMINI_API_KEY is not configured");
-            return { error: "GEMINI_API_KEY is not configured" };
-        }
-
-        if (!process.env.NVIDIA_API_KEY) {
-            console.error("Auto Gen: NVIDIA_API_KEY is not configured");
-            return { error: "NVIDIA_API_KEY is not configured" };
-        }
-
         if (!supabaseServer) {
             console.error("Auto Gen: Supabase is not configured on the server");
             return { error: "Supabase is not configured on the server" };
         }
+
+        const geminiApiKey = await getProviderApiKey("gemini");
+        const nvidiaApiKey = await getProviderApiKey("nvidia");
         
         let client = supabaseServer;
         let userId = null;
         if (token) {
+           const { supabaseUrl, supabaseAnonKey } = getRequiredServerSupabaseConfig();
            client = createClient(
-             process.env.VITE_SUPABASE_URL!,
-             process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY!,
+             supabaseUrl,
+             supabaseAnonKey,
              {
                global: { headers: { Authorization: token } }
              }
@@ -42,7 +37,7 @@ export const generateDailyArchive = async (token?: string) => {
         console.log("Auto Gen: Requesting topic from Gemini...");
         let topic = "";
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+            const ai = new GoogleGenAI({ apiKey: geminiApiKey });
             const geminiResponse = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: "Give me exactly one unique archive topic for a Sri Lankan historical artifact or ancient site. Respond with ONLY the title string, nothing else. Do not use quotes or markdown.",
@@ -86,7 +81,7 @@ Format exactly as Markdown with the following structure:
 
         const nvidiaClient = new OpenAI({
             baseURL: "https://integrate.api.nvidia.com/v1",
-            apiKey: process.env.NVIDIA_API_KEY
+            apiKey: nvidiaApiKey
         });
 
         console.log("Auto Gen: Requesting article from NVIDIA Minimax...");

@@ -14,7 +14,17 @@ View your app in AI Studio: https://ai.studio/apps/efe95422-916a-4f3c-9137-34d15
 
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   (This project uses pnpm via Corepack.)
+   `corepack enable`
+   `corepack pnpm install`
+2. Configure Supabase env values in `.env`:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (server only, never expose to client/Tauri)
+   - `NVIDIA_API_KEY` (optional server-side fallback for Shingo/Archive generation)
+3. Apply SQL in `supabase/sql/provider_api_keys.sql` to create the private key store table.
+4. Insert provider keys (e.g. `gemini`, `nvidia`) into `private.api_keys` (see commented SQL insert examples in `supabase/sql/provider_api_keys.sql`).
+5. Run the app:
+   `corepack pnpm dev`

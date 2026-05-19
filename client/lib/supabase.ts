@@ -1,8 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabasePublishableKey =
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const supabaseAuthRedirectUrl = import.meta.env.VITE_SUPABASE_AUTH_REDIRECT_URL;
 
 const isPlaceholder = (value?: string) => Boolean(value?.startsWith("__") && value?.endsWith("__"));
@@ -31,7 +31,7 @@ const getValidUrl = (value?: string) => {
 };
 
 export const isSupabaseConfigured = Boolean(
-  hasValidUrl && supabasePublishableKey && !isPlaceholder(supabasePublishableKey),
+  hasValidUrl && supabaseAnonKey && !isPlaceholder(supabaseAnonKey),
 );
 
 export const getSupabaseEmailRedirectUrl = () => {
@@ -48,5 +48,5 @@ export const getSupabaseEmailRedirectUrl = () => {
 };
 
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl!, supabasePublishableKey!)
+  ? createClient(supabaseUrl!, supabaseAnonKey!)
   : null;

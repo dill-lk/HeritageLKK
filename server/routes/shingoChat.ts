@@ -1,5 +1,6 @@
 import { RequestHandler } from "express";
 import OpenAI from "openai";
+import { getProviderApiKey } from "../lib/providerApiKeys";
 
 export const handleShingoChat: RequestHandler = async (req, res) => {
   try {
@@ -8,7 +9,7 @@ export const handleShingoChat: RequestHandler = async (req, res) => {
       return res.status(400).json({ error: "Messages array is required" });
     }
 
-    const apiKey = process.env.NVIDIA_API_KEY || "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";
+    const apiKey = await getProviderApiKey("nvidia");
 
     const systemPrompt = "You are Shingo AI, an expert on Sri Lankan heritage, culture, historical context, entry fees, weather, and directions to specific sites. Provide concise, helpful, and friendly answers.";
     
@@ -54,6 +55,7 @@ export const handleShingoChat: RequestHandler = async (req, res) => {
     res.end();
   } catch (error) {
     console.error("Shingo AI chat error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    const message = error instanceof Error ? error.message : "Internal server error";
+    res.status(500).json({ error: message });
   }
 };
