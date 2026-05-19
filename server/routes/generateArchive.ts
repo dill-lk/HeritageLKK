@@ -1,5 +1,6 @@
 import { RequestHandler } from "express";
 import OpenAI from "openai";
+import { getProviderApiKey } from "../lib/providerApiKeys";
 
 export const handleGenerateArchive: RequestHandler = async (req, res) => {
   try {
@@ -8,7 +9,7 @@ export const handleGenerateArchive: RequestHandler = async (req, res) => {
       return res.status(400).json({ error: "Topic is required" });
     }
 
-    const apiKey = process.env.NVIDIA_API_KEY || "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";
+    const apiKey = await getProviderApiKey("nvidia");
 
     const prompt = `You are a heritage archivist for Sri Lanka. Generate an engaging archive article about "${topic}".
 Format exactly as Markdown with the following structure:
