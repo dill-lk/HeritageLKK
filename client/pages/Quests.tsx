@@ -8,75 +8,324 @@ const initialLeaderboard = [
   { rank: 3, name: "Disara Bimsilu", city: "Matara", score: "10.9k" },
 ];
 
-const activeQuests = [
+const fallbackQuests = [
   {
+    id: "fake-1",
     icon: "🏰",
     title: "The Fort Guardian",
     description: "Scan 3 watchtowers in Galle Fort",
-    pts: "+500\nPTS",
-    progress: 75,
+    points: 500,
     accent: "rgba(183,82,183,0.10)",
   },
   {
+    id: "fake-2",
     icon: "🌿",
     title: "Forest Secret Finder",
     description: "Identify 5 endemic plants from Kanneliya",
-    pts: "+800\nPTS",
-    progress: 30,
+    points: 800,
     accent: "rgba(82,183,136,0.10)",
     border: "rgba(82,183,136,0.20)",
   },
+  {
+    id: "fake-3",
+    icon: "🐘",
+    title: "Wildlife Tracker",
+    description: "Spot and document a wild elephant in Minneriya",
+    points: 1000,
+    accent: "rgba(244,162,97,0.10)",
+    border: "rgba(244,162,97,0.20)",
+  },
+  {
+    id: "fake-4",
+    icon: "🌊",
+    title: "Ocean Defender",
+    description: "Participate in a Mirissa beach cleanup",
+    points: 300,
+    accent: "rgba(82,183,136,0.10)",
+  },
+  {
+    id: "fake-5",
+    icon: "🏛️",
+    title: "Ruins Explorer",
+    description: "Visit and read the history of 3 ruins in Polonnaruwa",
+    points: 600,
+    accent: "rgba(183,82,183,0.10)",
+    border: "rgba(183,82,183,0.20)",
+  },
+  {
+    id: "fake-6",
+    icon: "🧗",
+    title: "Summit Scaler",
+    description: "Climb to the top of Sigiriya Rock Fortress",
+    points: 1200,
+    accent: "rgba(244,162,97,0.10)",
+  },
+  {
+    id: "fake-7",
+    icon: "🫖",
+    title: "Tea Trailblazer",
+    description: "Learn about the tea-making process in Nuwara Eliya",
+    points: 400,
+    accent: "rgba(82,183,136,0.10)",
+    border: "rgba(82,183,136,0.20)",
+  },
+  {
+    id: "fake-8",
+    icon: "🚂",
+    title: "Ella Odyssey",
+    description: "Take the scenic train ride from Kandy to Ella",
+    points: 750,
+    accent: "rgba(183,82,183,0.10)",
+    border: "rgba(183,82,183,0.20)",
+  },
+  {
+    id: "fake-9",
+    icon: "🤿",
+    title: "Coral Guardian",
+    description: "Explore the coral reefs of Pigeon Island",
+    points: 850,
+    accent: "rgba(82,183,136,0.10)",
+  },
+  {
+    id: "fake-10",
+    icon: "🛕",
+    title: "Sacred Relic",
+    description: "Visit the Temple of the Sacred Tooth Relic",
+    points: 600,
+    accent: "rgba(244,162,97,0.10)",
+    border: "rgba(244,162,97,0.20)",
+  },
+  {
+    id: "fake-11",
+    icon: "🌅",
+    title: "Adam's Peak Pilgrim",
+    description: "Reach the summit of Adam's Peak at sunrise",
+    points: 1500,
+    accent: "rgba(183,82,183,0.10)",
+  },
+  {
+    id: "fake-12",
+    icon: "🐆",
+    title: "Yala Safari",
+    description: "Spot a leopard on a safari in Yala National Park",
+    points: 1100,
+    accent: "rgba(82,183,136,0.10)",
+    border: "rgba(82,183,136,0.20)",
+  },
+  {
+    id: "fake-13",
+    icon: "🏄",
+    title: "Arugam Bay Surfer",
+    description: "Catch a wave in the surfing capital",
+    points: 900,
+    accent: "rgba(244,162,97,0.10)",
+  }
 ];
 
 export default function Quests() {
-  const [userScore, setUserScore] = useState<number>(450);
-  const [userRank, setUserRank] = useState<number>(4);
+  const [userScore, setUserScore] = useState<number>(0);
+  const [userRank, setUserRank] = useState<number | null>(null);
   const [leaderboard, setLeaderboard] = useState(initialLeaderboard);
+  const [activeQuests, setActiveQuests] = useState<any[]>(fallbackQuests);
+  const [completedQuests, setCompletedQuests] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto-claim interactive flow state
+  const [activeFlowQuest, setActiveFlowQuest] = useState<any | null>(null);
+  const [flowStep, setFlowStep] = useState<"intro" | "checking_location" | "quiz" | "completed" | "error">("intro");
+  const [quizSelection, setQuizSelection] = useState<number | null>(null);
+
+  // Fetch logic
+  const loadData = async () => {
+    if (!supabase) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+
+    try {
+      // 1. Fetch User Points
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("points, full_name, city")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (profile) {
+        setUserScore(profile.points || 0);
+        
+        const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).gt('points', profile.points || 0);
+        setUserRank((count || 0) + 1);
+      }
+
+      // 2. Fetch Leaderboard
+      const { data: topUsers } = await supabase
+        .from("profiles")
+        .select("full_name, city, points")
+        .order("points", { ascending: false })
+        .limit(3);
+        
+      if (topUsers && topUsers.length > 0) {
+        setLeaderboard(topUsers.map((u: any, idx: number) => ({
+          rank: idx + 1,
+          name: u.full_name || "Unknown",
+          city: u.city || "Sri Lanka",
+          score: (u.points / 1000).toFixed(1) + "k"
+        })));
+      }
+
+      // 3. Fetch Quests from DB
+      let { data: dbQuests, error: qError } = await supabase.from("quests").select("*");
+
+      if (!qError && dbQuests && dbQuests.length === 0) {
+        // Automatically seed the initial database if empty
+        const seedData = fallbackQuests.map(q => ({
+          icon: q.icon,
+          title: q.title,
+          description: q.description,
+          points: q.points
+        }));
+        await supabase.from("quests").insert(seedData);
+        
+        // Re-fetch now that we've seeded
+        const { data: generatedQuests } = await supabase.from("quests").select("*");
+        if (generatedQuests) {
+          dbQuests = generatedQuests;
+        }
+      }
+
+      if (!qError && dbQuests && dbQuests.length > 0) {
+        // Fetch User Completed Quests
+        const { data: userQ } = await supabase.from("user_quests").select("quest_id, quests(*)").eq("user_id", session.user.id);
+        const completedIds = userQ ? userQ.map(q => q.quest_id) : [];
+        
+        const available = dbQuests.filter(q => !completedIds.includes(q.id));
+        const completed = userQ ? userQ.map(q => q.quests).filter(Boolean) : [];
+        
+        // Add styles if missing
+        const stylizedAvailable = available.map((q, i) => ({
+           ...q,
+           accent: i % 2 === 0 ? "rgba(183,82,183,0.10)" : "rgba(82,183,136,0.10)",
+           border: "rgba(244,162,97,0.10)"
+        }));
+
+        setActiveQuests(stylizedAvailable);
+        setCompletedQuests(completed);
+      } else {
+         // Use fallback if table doesn't exist (local session state)
+         setActiveQuests(fallbackQuests.map((q, i) => ({
+           ...q,
+           accent: i % 2 === 0 ? "rgba(183,82,183,0.10)" : "rgba(82,183,136,0.10)",
+           border: "rgba(244,162,97,0.10)"
+         })));
+      }
+    } catch (e) {
+      console.warn("Error fetching quest data", e);
+    }
+  };
 
   useEffect(() => {
-    async function fetchPoints() {
-      if (!supabase) return;
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-
-      // Try fetching points from profiles table
-      try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("points, full_name, city")
-          .eq("id", session.user.id)
-          .single();
-
-        if (!error && data) {
-          setUserScore(data.points || 0);
-          
-          // Optionally grab top users
-          const { data: topUsers } = await supabase
-            .from("profiles")
-            .select("full_name, city, points")
-            .order("points", { ascending: false })
-            .limit(3);
-            
-          if (topUsers && topUsers.length > 0) {
-            setLeaderboard(topUsers.map((u: any, idx: number) => ({
-              rank: idx + 1,
-              name: u.full_name || "Unknown",
-              city: u.city || "Sri Lanka",
-              score: (u.points / 1000).toFixed(1) + "k"
-            })));
-            
-            // Re-calculate user rank dynamically if possible, or just default to something
-             const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).gt('points', data.points || 0);
-             setUserRank((count || 0) + 1);
-          }
-        }
-      } catch (e) {
-        console.warn("Could not fetch user points from profiles table", e);
-      }
-    }
-    
-    fetchPoints();
+    loadData();
   }, []);
+
+  const handleCompleteQuest = async (questId: string, pts: number) => {
+    if (!supabase) return;
+    setIsSubmitting(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      // 1. If it's a real backend quest
+      if (!questId.startsWith("fake-")) {
+        // Insert completion
+        const { error: insertErr } = await supabase.from("user_quests").insert({
+          user_id: session.user.id,
+          quest_id: questId
+        });
+        
+        if (insertErr) throw insertErr;
+      } else {
+        // Fallback UI State
+        const completedQuest = activeQuests.find(q => q.id === questId);
+        if (completedQuest) {
+           setCompletedQuests(prev => [...prev, completedQuest]);
+           setActiveQuests(prev => prev.filter(q => q.id !== questId));
+        }
+      }
+      
+      // 2. Fetch current points to safely increment
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("points")
+        .eq("id", session.user.id)
+        .maybeSingle();
+        
+      if (!profile) {
+        // Create profile if missing
+        await supabase.from("profiles").upsert({
+          id: session.user.id,
+          full_name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "Explorer",
+          points: pts
+        });
+      } else {
+        // 3. Update points safely
+        const currentPts = profile.points || 0;
+        await supabase.from("profiles").update({ points: currentPts + pts }).eq("id", session.user.id);
+      }
+
+      // Refresh
+      await loadData();
+    } catch (e: any) {
+      console.error("Error completing quest:", e);
+    } finally {
+      setIsSubmitting(false);
+      setFlowStep("completed");
+    }
+  };
+
+  const startQuestFlow = (quest: any) => {
+    setActiveFlowQuest(quest);
+    setFlowStep("intro");
+    setQuizSelection(null);
+  };
+
+  const advanceFlow = () => {
+    if (flowStep === "intro") {
+      setFlowStep("checking_location");
+      
+      // Real GPS usage
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            // Once we have a location, we allow proceeding
+            setTimeout(() => {
+               setFlowStep("quiz");
+            }, 1000);
+          },
+          (error) => {
+            console.warn("GPS error", error);
+            // Even if it fails (e.g., permissions denied), let them proceed for demo
+            setTimeout(() => {
+               setFlowStep("quiz");
+            }, 1000);
+          },
+          { enableHighAccuracy: true } // Request high accuracy for mobile GPS
+        );
+      } else {
+        // Fallback if no geolocation
+        setTimeout(() => {
+           setFlowStep("quiz");
+        }, 2000);
+      }
+    } else if (flowStep === "quiz") {
+       if (quizSelection !== null) {
+          handleCompleteQuest(activeFlowQuest.id, activeFlowQuest.points);
+       }
+    } else if (flowStep === "completed") {
+       setActiveFlowQuest(null);
+    }
+  };
 
   return (
     <div className="min-h-screen w-full bg-[#100E0A] flex justify-center font-['Plus_Jakarta_Sans',sans-serif]">
@@ -117,6 +366,7 @@ export default function Quests() {
                     <span className="text-[#FEFBE0] text-[36px] font-extrabold leading-10">{userScore.toLocaleString()}</span>
                     <span className="text-[#E9C46A] text-sm font-medium leading-5">Points Earned</span>
                   </div>
+                  <div className="text-[#E9C46A]/60 text-xs">Global Rank: #{userRank !== null ? userRank : "-"}</div>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-[#F4A261]/10 flex items-center justify-center flex-shrink-0">
                   <span className="text-[#F4A262] text-lg font-bold leading-7">Lvl 4</span>
@@ -159,11 +409,12 @@ export default function Quests() {
               ))}
             </div>
 
-
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 mt-4">
+               <h2 className="text-[#FEFBE0] text-xl font-bold leading-7 px-2 mb-2">Available Quests</h2>
+              {activeQuests.length === 0 && <p className="px-2 text-white/50 text-sm">No new quests available right now! Try again later.</p>}
               {activeQuests.map((quest) => (
                 <div
-                  key={quest.title}
+                  key={quest.id}
                   className="rounded-[32px] border bg-white/5 p-5 overflow-hidden relative flex flex-col gap-3"
                   style={{ borderColor: quest.border ?? "rgba(244,162,97,0.10)" }}
                 >
@@ -176,56 +427,172 @@ export default function Quests() {
                   <div className="flex items-start justify-between relative">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-12 rounded-2xl border border-[#F4A261]/10 bg-[#1F160E] flex items-center justify-center text-2xl leading-8 flex-shrink-0">
-                        {quest.icon}
+                        {quest.icon || "🏆"}
                       </div>
                       <div>
                         <h3 className="text-[#FEFBE0] text-base font-bold leading-6">{quest.title}</h3>
                         <p className="text-[#FEFAE0]/60 text-xs leading-4 mt-0.5">{quest.description}</p>
                       </div>
                     </div>
-                    <span className="text-[#E9C46A] text-[10px] font-bold leading-[15px] text-right whitespace-pre-line flex-shrink-0 ml-2">
-                      {quest.pts}
-                    </span>
                   </div>
 
-                  <div className="h-2 rounded-full bg-[#2E1E12] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-[#F4A262] to-[#FFC496] shadow-[0_0_10px_0_rgba(244,162,98,0.50)]"
-                      style={{ width: `${quest.progress}%` }}
-                    />
-                  </div>
+                 <div className="flex items-center justify-between mt-2 font-sans relative z-10">
+                     <span className="text-[#E9C46A] text-xs font-bold leading-[15px] p-2 bg-[#E9C46A]/10 rounded-lg">
+                      +{quest.points} PTS
+                    </span>
+                    <button 
+                      onClick={() => startQuestFlow(quest)}
+                      className="px-4 py-2 bg-[#F4A261] hover:bg-[#F4A261]/80 text-[#100E0A] rounded-full text-xs font-bold uppercase tracking-wider transition-all"
+                    >
+                      Start
+                    </button>
+                 </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Completed Today */}
+          {/* Completed History */}
+          {completedQuests.length > 0 && (
           <div className="flex flex-col gap-4">
-            <h2 className="text-[#FEFBE0] text-xl font-bold leading-7 px-2">Completed Today</h2>
+            <h2 className="text-[#FEFBE0] text-xl font-bold leading-7 px-2">Completed Quests</h2>
 
-            <div className="rounded-[32px] border border-[#F4A261]/10 bg-[#241B13] p-5 flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl border border-[#F4A261]/10 bg-[#1F160E] flex items-center justify-center text-2xl leading-8 flex-shrink-0">
-                ⛩️
-              </div>
-              <div className="flex-1 min-w-0 flex flex-col gap-1">
-                <h3 className="text-[#F4A261] text-base font-bold leading-6">Temple Visit</h3>
-                <p className="text-[#F4A261]/70 text-xs leading-4">Visited Yatagala Temple site</p>
-                <div className="flex items-center gap-2">
-                  <span className="bg-[#1F160E] rounded-full px-2 py-0.5 text-[#F4A261] text-[9px] font-bold tracking-[0.45px] uppercase leading-[13.5px]">
-                    Claimed
-                  </span>
-                  <span className="text-[#E9C46A] text-[10px] font-bold leading-[15px]">+200 PTS</span>
-                </div>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-[#F4A261] shadow-[0_0_15px_0_rgba(244,162,97,0.30)] flex items-center justify-center flex-shrink-0">
-                <svg width="11" height="10" viewBox="0 0 11 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10.2797 2.47031C10.5727 2.76328 10.5727 3.23906 10.2797 3.53203L4.27974 9.53203C3.98677 9.82499 3.51099 9.82499 3.21802 9.53203L0.218018 6.53203C-0.0749512 6.23906 -0.0749512 5.76328 0.218018 5.47031C0.510986 5.17734 0.986768 5.17734 1.27974 5.47031L3.75005 7.93828L9.22036 2.47031C9.51333 2.17734 9.98911 2.17734 10.2821 2.47031H10.2797Z" fill="#100E0A"/>
-                </svg>
-              </div>
-            </div>
+            {completedQuests.map((quest, i) => (
+               <div key={i} className="rounded-[32px] border border-[#F4A261]/10 bg-[#241B13] p-5 flex items-center gap-4 mb-2">
+                 <div className="w-14 h-14 rounded-2xl border border-[#F4A261]/10 bg-[#1F160E] flex items-center justify-center text-2xl leading-8 flex-shrink-0">
+                   {quest?.icon || "⛩️"}
+                 </div>
+                 <div className="flex-1 min-w-0 flex flex-col gap-1">
+                   <h3 className="text-[#F4A261] text-base font-bold leading-6">{quest?.title || "Unknown Quest"}</h3>
+                   <div className="flex items-center gap-2 mt-1">
+                     <span className="bg-[#1F160E] rounded-full px-2 py-0.5 text-[#F4A261] text-[9px] font-bold tracking-[0.45px] uppercase leading-[13.5px]">
+                       Claimed
+                     </span>
+                     <span className="text-[#E9C46A] text-[10px] font-bold leading-[15px]">+{quest?.points || 0} PTS</span>
+                   </div>
+                 </div>
+                 <div className="w-8 h-8 rounded-full bg-[#F4A261] shadow-[0_0_15px_0_rgba(244,162,97,0.30)] flex items-center justify-center flex-shrink-0">
+                   <svg width="11" height="10" viewBox="0 0 11 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                     <path d="M10.2797 2.47031C10.5727 2.76328 10.5727 3.23906 10.2797 3.53203L4.27974 9.53203C3.98677 9.82499 3.51099 9.82499 3.21802 9.53203L0.218018 6.53203C-0.0749512 6.23906 -0.0749512 5.76328 0.218018 5.47031C0.510986 5.17734 0.986768 5.17734 1.27974 5.47031L3.75005 7.93828L9.22036 2.47031C9.51333 2.17734 9.98911 2.17734 10.2821 2.47031H10.2797Z" fill="#100E0A"/>
+                   </svg>
+                 </div>
+               </div>
+            ))}
           </div>
+          )}
 
         </div>
+
+        {/* Quest Action Dialog (Modal overlay) */}
+        {activeFlowQuest && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center px-4 bg-black/80 backdrop-blur-md">
+            <div className="w-full max-w-[380px] bg-[#241B13] border border-[#F4A261]/20 rounded-[32px] p-6 flex flex-col items-center text-center shadow-2xl relative overflow-hidden">
+               <div className="absolute top-[-50px] bg-[#F4A261]/10 rounded-full w-[200px] h-[200px] blur-[50px] -z-10" />
+
+               <button 
+                 onClick={() => setActiveFlowQuest(null)} 
+                 className="absolute top-4 right-4 text-white/50 hover:text-white"
+               >
+                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+               </button>
+
+               <div className="w-16 h-16 rounded-full bg-[#1F160E] border border-[#F4A261]/20 flex items-center justify-center text-3xl mb-4 relative z-10">
+                 {activeFlowQuest.icon || "🗺️"}
+                 {flowStep === "checking_location" && (
+                   <div className="absolute inset-0 rounded-full border-2 border-[#52B788] animate-ping opacity-75"></div>
+                 )}
+               </div>
+               
+               <h3 className="text-xl font-bold text-[#FEFBE0] mb-2">{activeFlowQuest.title}</h3>
+               
+               {flowStep === "intro" && (
+                 <>
+                   <p className="text-white/70 text-sm mb-6">{activeFlowQuest.description}</p>
+                   <div className="bg-[#F4A261]/10 text-[#F4A261] px-4 py-2 rounded-xl mb-6 font-bold text-sm">
+                     Reward: +{activeFlowQuest.points} PTS
+                   </div>
+                   <button 
+                     onClick={advanceFlow}
+                     className="w-full py-3 bg-[#F4A261] hover:bg-[#F4A261]/80 text-[#100E0A] rounded-2xl font-bold uppercase tracking-wide transition-all"
+                   >
+                     Confirm Location
+                   </button>
+                 </>
+               )}
+
+               {flowStep === "checking_location" && (
+                 <div className="py-8 flex flex-col items-center">
+                    <p className="text-[#52B788] font-bold text-base mb-2">Verifying Location...</p>
+                    <p className="text-white/50 text-xs">Accessing GPS coordinates</p>
+                 </div>
+               )}
+
+               {flowStep === "quiz" && (
+                 <div className="w-full flex flex-col items-center">
+                    <div className="text-[#52B788] font-bold text-sm mb-4 bg-[#52B788]/10 px-3 py-1 rounded-full">
+                       Location Verified ✓
+                    </div>
+                    <p className="text-white/90 text-sm mb-4 font-medium">To complete this quest, answer the guardian's question:</p>
+                    
+                    <div className="w-full text-left bg-black/20 p-4 rounded-2xl mb-4 border border-white/5">
+                      <p className="text-white text-sm mb-4 leading-relaxed">
+                        What is a key historical or ecological fact associated with this location?
+                      </p>
+                      
+                      <div className="flex flex-col gap-2">
+                         {[
+                           "Built to protect the coast / Endemic ecosystem",
+                           "Created within the last decade", 
+                           "A shopping complex",
+                         ].map((opt, idx) => (
+                           <button 
+                             key={idx}
+                             onClick={() => setQuizSelection(idx)}
+                             className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm ${
+                               quizSelection === idx 
+                                 ? "bg-[#F4A261]/20 border-[#F4A261] text-[#F4A261]" 
+                                 : "bg-white/5 border-white/5 text-white/70 hover:bg-white/10"
+                             }`}
+                           >
+                              {opt}
+                           </button>
+                         ))}
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={advanceFlow}
+                      disabled={quizSelection !== 0 && quizSelection !== null}
+                      className={`w-full py-3 rounded-2xl font-bold uppercase tracking-wide transition-all ${
+                         quizSelection === 0 && !isSubmitting
+                           ? "bg-[#52B788] text-white shadow-[0_0_15px_rgba(82,183,136,0.3)]" 
+                           : "bg-white/10 text-white/30 cursor-not-allowed"
+                      }`}
+                    >
+                      {isSubmitting ? "Claiming..." : (quizSelection === 0 ? "Claim Reward" : "Select Correct Answer")}
+                    </button>
+                 </div>
+               )}
+
+               {flowStep === "completed" && (
+                 <div className="py-4 flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-full bg-[#52B788]/20 text-[#52B788] flex items-center justify-center text-3xl mb-4">
+                       ✓
+                    </div>
+                    <h4 className="text-xl font-bold text-white mb-2">Quest Completed!</h4>
+                    <p className="text-[#F4A261] font-bold text-lg mb-6">+{activeFlowQuest.points} PTS</p>
+                    <button 
+                      onClick={advanceFlow}
+                      className="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold uppercase tracking-wide transition-all"
+                    >
+                      Close
+                    </button>
+                 </div>
+               )}
+
+            </div>
+          </div>
+        )}
 
         <BottomNav />
       </div>

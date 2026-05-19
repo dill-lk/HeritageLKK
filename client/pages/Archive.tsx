@@ -11,6 +11,7 @@ interface ArchiveItem {
   loc: string;
   category: string;
   content: string;
+  image?: string;
   images: string[];
   created_at: string;
 }
@@ -123,12 +124,12 @@ export default function Archive() {
                 </div>
                 
                 <Link to={`/archive/${featuredArchive.id}`} className="block relative h-[320px] rounded-[24px] overflow-hidden border border-white/10 group">
-                  <img 
-                    src={featuredArchive.images?.[0] || `https://image.pollinations.ai/prompt/${encodeURIComponent(featuredArchive.title + " Sri Lanka historical artifact heritage realistic 4k")}?width=1000&height=1000&nologo=true`} 
-                    alt={featuredArchive.title} 
-                    onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1596706798032-9cb773b40bb0?q=80&w=2670&auto=format&fit=crop" }}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
+                    <img 
+                      src={featuredArchive.image || featuredArchive.images?.[0] || `https://image.pollinations.ai/prompt/${encodeURIComponent(featuredArchive.title + " Sri Lanka historical artifact heritage realistic 4k")}?width=1000&height=1000&nologo=true`} 
+                      alt={featuredArchive.title} 
+                      onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1596706798032-9cb773b40bb0?q=80&w=2670&auto=format&fit=crop" }}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#100E0A] via-[#100E0A]/60 to-transparent opacity-90" />
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-500" />
                   
@@ -154,7 +155,7 @@ export default function Archive() {
                   <div className="flex p-4 gap-4 items-center">
                     <div className="w-[88px] h-[88px] shrink-0 rounded-2xl overflow-hidden relative">
                       <img 
-                        src={item.images?.[0] || `https://image.pollinations.ai/prompt/${encodeURIComponent(item.title + " Sri Lanka historical artifact heritage realistic 4k")}?width=1000&height=1000&nologo=true`} 
+                        src={item.image || item.images?.[0] || `https://image.pollinations.ai/prompt/${encodeURIComponent(item.title + " Sri Lanka historical artifact heritage realistic 4k")}?width=1000&height=1000&nologo=true`} 
                         alt={item.title}
                         onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1596706798032-9cb773b40bb0?q=80&w=2670&auto=format&fit=crop" }}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"

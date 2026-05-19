@@ -10,6 +10,7 @@ export default function BottomNav() {
   const isQuests = pathname.startsWith("/quests");
   const isShingo = pathname === "/archive/shingo";
   const isArchive = pathname.startsWith("/archive") && !isShingo;
+  const isProfile = pathname === "/profile";
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[100] flex justify-center pb-4 pointer-events-none">
