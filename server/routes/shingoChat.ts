@@ -7,6 +7,11 @@ type ChatMessage = {
   content: string;
 };
 
+type ChatCompletionMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
 export const handleShingoChat: RequestHandler = async (req, res) => {
   try {
     const rawMessages = req.body?.messages;
@@ -14,13 +19,27 @@ export const handleShingoChat: RequestHandler = async (req, res) => {
 
     let messages: ChatMessage[] | null = null;
     if (Array.isArray(rawMessages)) {
-      messages = rawMessages.filter(
-        (message): message is ChatMessage =>
-          message &&
-          typeof message === "object" &&
-          (message.role === "user" || message.role === "assistant") &&
-          typeof message.content === "string" &&
-          message.content.trim().length > 0,
+      const hasInvalidMessage = rawMessages.some(
+        (message) =>
+          !(
+            message &&
+            typeof message === "object" &&
+            (message.role === "user" || message.role === "assistant") &&
+            typeof message.content === "string" &&
+            message.content.trim().length > 0
+          ),
+      );
+      if (hasInvalidMessage) {
+        return res.status(400).json({
+          error: "All messages must include role ('user' or 'assistant') and non-empty content",
+        });
+      }
+
+      messages = rawMessages.map(
+        (message): ChatMessage => ({
+          role: message.role,
+          content: message.content.trim(),
+        }),
       );
     } else if (typeof rawMessage === "string" && rawMessage.trim()) {
       messages = [{ role: "user", content: rawMessage.trim() }];
@@ -50,9 +69,9 @@ export const handleShingoChat: RequestHandler = async (req, res) => {
 
     const systemPrompt = "You are Shingo AI, an expert on Sri Lankan heritage, culture, historical context, entry fees, weather, and directions to specific sites. Provide concise, helpful, and friendly answers.";
     
-    const formattedMessages: any = [
+    const formattedMessages: ChatCompletionMessage[] = [
       { role: "system", content: systemPrompt },
-      ...messages
+      ...messages,
     ];
 
     const client = new OpenAI({
