@@ -15,13 +15,17 @@ type ChatCompletionMessage = ChatMessage | {
 };
 
 const isValidChatMessage = (message: unknown): message is ChatMessage =>
-  !!message &&
-  typeof message === "object" &&
-  "role" in message &&
-  "content" in message &&
-  ((message as { role: unknown }).role === "user" || (message as { role: unknown }).role === "assistant") &&
-  typeof (message as { content: unknown }).content === "string" &&
-  (message as { content: string }).content.trim().length > 0;
+{
+  if (!message || typeof message !== "object") {
+    return false;
+  }
+
+  const candidate = message as { role?: unknown; content?: unknown };
+  const hasValidRole = candidate.role === "user" || candidate.role === "assistant";
+  const hasValidContent = typeof candidate.content === "string" && candidate.content.trim().length > 0;
+
+  return hasValidRole && hasValidContent;
+};
 
 export const handleShingoChat: RequestHandler = async (req, res) => {
   try {
@@ -51,6 +55,15 @@ export const handleShingoChat: RequestHandler = async (req, res) => {
       typeof rawMessage.content === "string" &&
       rawMessage.content.trim()
     ) {
+      if (
+        rawMessage.role !== undefined &&
+        rawMessage.role !== "user" &&
+        rawMessage.role !== "assistant"
+      ) {
+        return res.status(400).json({
+          error: "Message role must be 'user' or 'assistant' when provided",
+        });
+      }
       messages = [
         {
           role: rawMessage.role === "assistant" ? "assistant" : "user",
