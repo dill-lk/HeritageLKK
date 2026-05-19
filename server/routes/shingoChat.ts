@@ -2,15 +2,26 @@ import { RequestHandler } from "express";
 import OpenAI from "openai";
 import { getProviderApiKey } from "../lib/providerApiKeys";
 
+type ChatMessageRole = "user" | "assistant";
+
 type ChatMessage = {
-  role: "user" | "assistant";
+  role: ChatMessageRole;
   content: string;
 };
 
-type ChatCompletionMessage = {
-  role: "system" | "user" | "assistant";
+type ChatCompletionMessage = ChatMessage | {
+  role: "system";
   content: string;
 };
+
+const isValidChatMessage = (message: unknown): message is ChatMessage =>
+  !!message &&
+  typeof message === "object" &&
+  "role" in message &&
+  "content" in message &&
+  ((message as { role: unknown }).role === "user" || (message as { role: unknown }).role === "assistant") &&
+  typeof (message as { content: unknown }).content === "string" &&
+  (message as { content: string }).content.trim().length > 0;
 
 export const handleShingoChat: RequestHandler = async (req, res) => {
   try {
@@ -19,23 +30,14 @@ export const handleShingoChat: RequestHandler = async (req, res) => {
 
     let messages: ChatMessage[] | null = null;
     if (Array.isArray(rawMessages)) {
-      const hasInvalidMessage = rawMessages.some(
-        (message) =>
-          !(
-            message &&
-            typeof message === "object" &&
-            (message.role === "user" || message.role === "assistant") &&
-            typeof message.content === "string" &&
-            message.content.trim().length > 0
-          ),
-      );
-      if (hasInvalidMessage) {
+      const validMessages = rawMessages.filter(isValidChatMessage);
+      if (validMessages.length !== rawMessages.length) {
         return res.status(400).json({
           error: "All messages must include role ('user' or 'assistant') and non-empty content",
         });
       }
 
-      messages = rawMessages.map(
+      messages = validMessages.map(
         (message): ChatMessage => ({
           role: message.role,
           content: message.content.trim(),
