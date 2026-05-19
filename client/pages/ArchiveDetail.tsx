@@ -7,7 +7,7 @@ import Markdown from "react-markdown";
 
 export default function ArchiveDetail() {
   const { id } = useParams();
-  const isNew = id === "new";
+  const isNew = id === "new" || window.location.pathname.includes("/admin/generate");
   const navigate = useNavigate();
 
   const [topic, setTopic] = useState("");
@@ -68,7 +68,10 @@ export default function ArchiveDetail() {
             .single();
 
           if (!error && record) {
-            setData(record);
+            setData({
+              ...record,
+              images: record.image ? [record.image] : (record.images || [])
+            });
           } else {
             setData(fallbackRecord);
           }
@@ -111,17 +114,23 @@ export default function ArchiveDetail() {
       }
       if (!res.body) throw new Error("No readable stream");
 
+      const aiImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(topic + " Sri Lanka historical artifact heritage realistic 4k")}?width=1000&height=1000&nologo=true`;
+
       setData({
         title: topic,
         subtitle: "AI GENERATED ARCHIVE",
         location: "SRI LANKA (AI ESTIMATED)",
         content: "",
-        images: ["https://images.unsplash.com/photo-1545657805-46eb13251a37?q=80&w=1000&auto=format&fit=crop"]
+        images: [aiImageUrl]
       });
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let streamedMarkdown = "";
+      let pTitle = topic;
+      let pSubtitle = "AI GENERATED ARCHIVE";
+      let pLocation = "SRI LANKA (AI ESTIMATED)";
+      let parsedContent = "";
 
       while (true) {
         const { value, done } = await reader.read();
@@ -130,7 +139,30 @@ export default function ArchiveDetail() {
         const chunk = decoder.decode(value, { stream: true });
         streamedMarkdown += chunk;
         
-        setData((prev: any) => ({ ...prev, content: streamedMarkdown }));
+        const lines = streamedMarkdown.split('\n');
+        const contentLines = [];
+        
+        for (const line of lines) {
+          if (line.match(/^#\s+/)) {
+            pTitle = line.replace(/^#\s+/, '').replace(/\*/g, '').trim() || pTitle;
+          } else if (line.match(/^##\s+/)) {
+            pSubtitle = line.replace(/^##\s+/, '').replace(/\*/g, '').trim() || pSubtitle;
+          } else if (line.match(/^\*\*Location:\*\*\s+/i) || line.match(/^Location:\s+/i)) {
+            pLocation = line.replace(/^\*+Location:\*+\s+/i, '').replace(/^Location:\s+/i, '').replace(/\*/g, '').trim() || pLocation;
+          } else {
+            contentLines.push(line);
+          }
+        }
+        
+        parsedContent = contentLines.join('\n').trim();
+        
+        setData((prev: any) => ({ 
+          ...prev, 
+          title: pTitle,
+          subtitle: pSubtitle,
+          location: pLocation,
+          content: parsedContent
+        }));
       }
 
       if (!streamedMarkdown.trim()) {
@@ -138,12 +170,12 @@ export default function ArchiveDetail() {
       }
       
       const newArchive = {
-        title: topic,
-        subtitle: "AI GENERATED ARCHIVE",
-        location: "SRI LANKA (AI ESTIMATED)",
-        intro: streamedMarkdown, // We'll store markdown text in "intro" so supabase schema isn't fully broken
-        content: streamedMarkdown,
-        images: ["https://images.unsplash.com/photo-1545657805-46eb13251a37?q=80&w=1000&auto=format&fit=crop"]
+        title: pTitle,
+        subtitle: pSubtitle,
+        location: pLocation,
+        intro: parsedContent || streamedMarkdown,
+        content: parsedContent || streamedMarkdown,
+        images: [aiImageUrl]
       };
 
       if (supabase) {
@@ -156,12 +188,19 @@ export default function ArchiveDetail() {
              subtitle: newArchive.subtitle,
              location: newArchive.location,
              intro: newArchive.intro,
-             user_id: session?.user?.id 
+             content: newArchive.content,
+             image: aiImageUrl,
+             user_id: session?.user?.id || null
           }])
           .select()
           .single();
           
-        if (!error && insertedData) {
+        if (error) {
+          console.error("Supabase insert error:", error);
+          throw new Error("Failed to save archive to database: " + error.message);
+        }
+          
+        if (insertedData) {
           navigate(`/archive/${insertedData.id}`);
           return;
         }
@@ -179,12 +218,13 @@ Write a detailed paragraph about the history and significance.
 ### Did you know?
 Write a fascinating historical fact.
       `;
+      const aiImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(topic + " Sri Lanka historical artifact heritage realistic 4k")}?width=1000&height=1000&nologo=true`;
       setData({
         title: topic,
         subtitle: "AI GENERATED ARCHIVE",
         location: "SRI LANKA (AI ESTIMATED)",
         content: fallbackMarkdown.trim(),
-        images: ["https://images.unsplash.com/photo-1545657805-46eb13251a37?q=80&w=1000&auto=format&fit=crop"]
+        images: [aiImageUrl]
       });
       setGenerateError(getErrorMessage(e));
     } finally {
@@ -204,7 +244,7 @@ Write a fascinating historical fact.
             <div className="w-16 h-16 rounded-full bg-[#F4A261]/20 flex items-center justify-center mb-6">
               <Sparkles className="w-8 h-8 text-[#F4A261]" />
             </div>
-            <h1 className="text-2xl font-bold mb-4 font-['Playfair_Display',serif] text-center">Generate Archive</h1>
+            <h1 className="text-2xl font-bold mb-4 font-['Playfair_Display',serif] text-center">Admin: Generate Archive</h1>
             <p className="text-white/60 text-center text-sm mb-8">Enter a topic to generate a comprehensive historical archive using NVIDIA NIM AI.</p>
             
              <input 
@@ -239,8 +279,9 @@ Write a fascinating historical fact.
             {/* Immersive Header Image */}
             <div className="relative h-[45vh] w-full shrink-0">
               <img 
-                src={id === 'mask' ? "https://images.unsplash.com/photo-1580211105436-bd8efb3684a0?q=80&w=1000&auto=format&fit=crop" : "https://images.unsplash.com/photo-1545657805-46eb13251a37?q=80&w=1000&auto=format&fit=crop"} 
+                src={data.image || data.images?.[0] || `https://image.pollinations.ai/prompt/${encodeURIComponent(data.title + " Sri Lanka historical artifact heritage realistic 4k")}?width=1000&height=1000&nologo=true`} 
                 alt="Archive Featured" 
+                onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1545657805-46eb13251a37?q=80&w=1000&auto=format&fit=crop" }}
                 className="absolute inset-0 w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#100E0A] via-[#100E0A]/60 to-transparent" />
@@ -297,7 +338,12 @@ Write a fascinating historical fact.
                     <div className="grid grid-cols-2 gap-3 mb-10">
                       {data.images.map((img: string, i: number) => (
                         <div key={i} className="rounded-[20px] overflow-hidden aspect-[4/5] border border-white/5">
-                          <img src={img} alt="Detail" className="w-full h-full object-cover" />
+                          <img 
+                            src={img} 
+                            alt="Detail" 
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            className="w-full h-full object-cover" 
+                          />
                         </div>
                       ))}
                     </div>

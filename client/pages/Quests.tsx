@@ -1,6 +1,8 @@
 import BottomNav from "@/components/BottomNav";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
-const leaderboard = [
+const initialLeaderboard = [
   { rank: 1, name: "Sanul Randisa", city: "Matara", score: "15.2k" },
   { rank: 2, name: "Jinuk Chanthusa", city: "Matara", score: "11.8k" },
   { rank: 3, name: "Disara Bimsilu", city: "Matara", score: "10.9k" },
@@ -27,6 +29,55 @@ const activeQuests = [
 ];
 
 export default function Quests() {
+  const [userScore, setUserScore] = useState<number>(450);
+  const [userRank, setUserRank] = useState<number>(4);
+  const [leaderboard, setLeaderboard] = useState(initialLeaderboard);
+
+  useEffect(() => {
+    async function fetchPoints() {
+      if (!supabase) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      // Try fetching points from profiles table
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("points, full_name, city")
+          .eq("id", session.user.id)
+          .single();
+
+        if (!error && data) {
+          setUserScore(data.points || 0);
+          
+          // Optionally grab top users
+          const { data: topUsers } = await supabase
+            .from("profiles")
+            .select("full_name, city, points")
+            .order("points", { ascending: false })
+            .limit(3);
+            
+          if (topUsers && topUsers.length > 0) {
+            setLeaderboard(topUsers.map((u: any, idx: number) => ({
+              rank: idx + 1,
+              name: u.full_name || "Unknown",
+              city: u.city || "Sri Lanka",
+              score: (u.points / 1000).toFixed(1) + "k"
+            })));
+            
+            // Re-calculate user rank dynamically if possible, or just default to something
+             const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).gt('points', data.points || 0);
+             setUserRank((count || 0) + 1);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch user points from profiles table", e);
+      }
+    }
+    
+    fetchPoints();
+  }, []);
+
   return (
     <div className="min-h-screen w-full bg-[#100E0A] flex justify-center font-['Plus_Jakarta_Sans',sans-serif]">
       <div className="relative w-full sm:max-w-[430px] shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-[#100E0A] pb-32 overflow-hidden">
@@ -63,7 +114,7 @@ export default function Quests() {
                 <div className="flex flex-col gap-1">
                   <span className="text-[#F4A262] text-[10px] font-bold tracking-[2px] uppercase leading-[15px]">Heritage Protector</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-[#FEFBE0] text-[36px] font-extrabold leading-10">1,240</span>
+                    <span className="text-[#FEFBE0] text-[36px] font-extrabold leading-10">{userScore.toLocaleString()}</span>
                     <span className="text-[#E9C46A] text-sm font-medium leading-5">Points Earned</span>
                   </div>
                 </div>

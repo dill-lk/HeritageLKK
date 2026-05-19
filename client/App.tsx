@@ -19,6 +19,9 @@ import NotFound from "./pages/NotFound";
 import Explore from "./pages/Explore";
 import Archive from "./pages/Archive";
 import ArchiveDetail from "./pages/ArchiveDetail";
+import ReportDamage from "./pages/ReportDamage";
+import ContributeArchive from "./pages/ContributeArchive";
+import ShingoAi from "./pages/ShingoAi";
 
 const queryClient = new QueryClient();
 
@@ -90,7 +93,11 @@ const App = () => {
             <Route path="/quests" element={<Quests />} />
             <Route path="/scanner" element={<Scanner />} />
             <Route path="/archive" element={<Archive />} />
+            <Route path="/archive/upload" element={<ContributeArchive />} />
+            <Route path="/archive/shingo" element={<ShingoAi />} />
+            <Route path="/archive/admin/generate" element={<ArchiveDetail />} />
             <Route path="/archive/:id" element={<ArchiveDetail />} />
+            <Route path="/report-damage" element={<ReportDamage />} />
             <Route path="/profile" element={<Navigate to="/home" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

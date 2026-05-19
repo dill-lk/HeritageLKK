@@ -12,8 +12,6 @@ jobs:
   android-apk:
     name: Build Android APK
     runs-on: ubuntu-latest
-    env:
-      SIGNING_ENABLED: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,56 +47,7 @@ jobs:
       - name: Build APK
         run: corepack pnpm tauri:android:build
 
-      - name: Decode Android signing keystore
-        if: ${{ env.SIGNING_ENABLED == 'true' }}
-        run: |
-          umask 077
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/release.keystore"
-          chmod 600 "$RUNNER_TEMP/release.keystore"
-
-      - name: Sign APK
-        if: ${{ env.SIGNING_ENABLED == 'true' }}
-        env:
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          UNSIGNED_LIST="$RUNNER_TEMP/unsigned_apks.txt"
-          find src-tauri/gen/android/app/build/outputs -type f -name '*-unsigned.apk' | sort > "$UNSIGNED_LIST"
-          if [ ! -s "$UNSIGNED_LIST" ]; then
-            echo "No unsigned APK found to sign."
-            exit 1
-          fi
-
-          BUILD_TOOLS_DIR="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V | tail -n 1)"
-          if [ -z "$BUILD_TOOLS_DIR" ]; then
-            echo "Android build-tools not found under ANDROID_HOME=$ANDROID_HOME"
-            exit 1
-          fi
-          while IFS= read -r APK_PATH; do
-            APK_DIR="$(dirname "$APK_PATH")"
-            APK_FILE="$(basename "$APK_PATH" .apk)"
-            APK_FILE_BASE="${APK_FILE//-unsigned/}"
-            SIGNED_APK="$APK_DIR/${APK_FILE_BASE}-signed.apk"
-
-            "$BUILD_TOOLS_DIR/apksigner" sign \
-              --ks "$RUNNER_TEMP/release.keystore" \
-              --ks-key-alias "$ANDROID_KEY_ALIAS" \
-              --ks-pass "env:ANDROID_KEYSTORE_PASSWORD" \
-              --key-pass "env:ANDROID_KEY_PASSWORD" \
-              --out "$SIGNED_APK" \
-              "$APK_PATH"
-
-            if ! "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$SIGNED_APK"; then
-              echo "Signed APK verification failed for $SIGNED_APK"
-              exit 1
-            fi
-
-            rm -f "$APK_PATH"
-          done < "$UNSIGNED_LIST"
-
-      - name: Upload APK/AAB artifact (unsigned build)
-        if: ${{ env.SIGNING_ENABLED != 'true' }}
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
@@ -106,22 +55,6 @@ jobs:
             src-tauri/gen/android/app/build/outputs/**/*.apk
             src-tauri/gen/android/app/build/outputs/**/*.aab
           if-no-files-found: warn
-
-      - name: Upload AAB artifact (signed build)
-        if: ${{ env.SIGNING_ENABLED == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-aab
-          path: src-tauri/gen/android/app/build/outputs/**/*.aab
-          if-no-files-found: warn
-
-      - name: Upload signed APK artifact
-        if: ${{ env.SIGNING_ENABLED == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk-signed
-          path: src-tauri/gen/android/app/build/outputs/**/*-signed.apk
-          if-no-files-found: error
 
   ios:
     name: Build iOS artifact

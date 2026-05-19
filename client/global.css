@@ -112,6 +112,32 @@
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  .shingo-logo-draw path {
+    animation: draw-logo 4s ease-in-out infinite;
+    stroke: currentColor;
+    stroke-width: 0.2px;
+  }
+
+  @keyframes draw-logo {
+    0% {
+      stroke-dasharray: 500;
+      stroke-dashoffset: 500;
+      fill: transparent;
+    }
+    30% {
+      stroke-dashoffset: 0;
+      fill: transparent;
+    }
+    50% {
+      fill: currentColor;
+    }
+    100% {
+      stroke-dasharray: 500;
+      stroke-dashoffset: 0;
+      fill: currentColor;
+    }
+  }
 }
 
 @layer base {

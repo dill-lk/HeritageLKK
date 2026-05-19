@@ -1,4 +1,5 @@
 import { RequestHandler } from "express";
+import OpenAI from "openai";
 
 export const handleGenerateArchive: RequestHandler = async (req, res) => {
   try {
@@ -7,70 +8,45 @@ export const handleGenerateArchive: RequestHandler = async (req, res) => {
       return res.status(400).json({ error: "Topic is required" });
     }
 
-    const apiKey = process.env.NVIDIA_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: "NVIDIA_API_KEY is not configured" });
-    }
+    const apiKey = process.env.NVIDIA_API_KEY || "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";
 
     const prompt = `You are a heritage archivist for Sri Lanka. Generate an engaging archive article about "${topic}".
-Format as Markdown with the following structure:
-# Title
-## Subtitle
-Write a brief engaging introduction.
-### The Heritage
-Write a detailed paragraph about the history and significance.
-### Did you know?
-Write a fascinating historical fact.`;
+Format exactly as Markdown with the following structure:
+# <A catchy, specific title>
+## <A relevant subtitle>
+**Location:** <City, Region, Sri Lanka>
 
-    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "minimaxai/minimax-m2.7",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.9,
-        top_p: 0.9,
-        max_tokens: 2048,
-        stream: true
-      })
+<Write a brief engaging introduction here>
+
+### The Heritage
+<Write a detailed paragraph about the history and significance.>
+
+### Did you know?
+<Write a fascinating historical fact.>`;
+
+    const client = new OpenAI({
+      baseURL: "https://integrate.api.nvidia.com/v1",
+      apiKey: apiKey
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("NVIDIA API error:", errorText);
-      return res.status(500).json({ error: "Failed to generate archive" });
-    }
+    const completion = await client.chat.completions.create({
+      model: "minimaxai/minimax-m2.7",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 1,
+      top_p: 0.95,
+      max_tokens: 8192,
+      stream: true
+    });
 
     res.setHeader("Content-Type", "text/plain");
     res.setHeader("Transfer-Encoding", "chunked");
 
-    if (response.body) {
-      const reader = (response.body as any).getReader();
-      const decoder = new TextDecoder("utf-8");
-      
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        
-        const chunkStr = decoder.decode(value, { stream: true });
-        const lines = chunkStr.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ') && line.trim() !== 'data: [DONE]') {
-            try {
-              const str = line.slice(6);
-              const json = JSON.parse(str);
-              const content = json.choices?.[0]?.delta?.content;
-              if (content) {
-                res.write(content);
-              }
-            } catch(e) {
-              // ignore parse errors for partial chunks
-            }
-          }
-        }
+    for await (const chunk of completion) {
+      if (!chunk.choices) {
+        continue;
+      }
+      if (chunk.choices[0]?.delta?.content != null) {
+        res.write(chunk.choices[0].delta.content);
       }
     }
     
