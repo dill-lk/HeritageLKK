@@ -22,11 +22,14 @@ export const runExpressHandler = (
       return;
     }
 
+    if (err instanceof Error) {
+      console.error("Express handler forwarded error", err);
+    } else {
+      console.error("Express handler forwarded a non-Error object", err);
+    }
+
     if (!res.headersSent) {
       const message = err instanceof Error ? err.message : "Internal server error";
-      if (!(err instanceof Error)) {
-        console.error("Express handler forwarded a non-Error object", err);
-      }
       res.status(500).json({ error: message });
     }
   };
