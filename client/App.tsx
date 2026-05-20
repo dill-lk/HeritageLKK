@@ -1,7 +1,4 @@
-import "./global.css";
-
 import { Toaster } from "@/components/ui/toaster";
-import { createRoot } from "react-dom/client";
 import { useEffect, useState } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -81,7 +78,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <BrowserRouter basename={process.env.NEXT_PUBLIC_BASE_PATH ?? ""}>
           <Routes>
             <Route path="/" element={<Navigate to={session ? "/home" : "/login"} replace />} />
             <Route
@@ -111,13 +108,4 @@ const App = () => {
   );
 };
 
-const rootElement = document.getElementById("root")!;
-// Reuse existing root during HMR to avoid duplicate root warning
-const existingRoot = (rootElement as any).__reactRoot;
-if (existingRoot) {
-  existingRoot.render(<App />);
-} else {
-  const root = createRoot(rootElement);
-  (rootElement as any).__reactRoot = root;
-  root.render(<App />);
-}
+export default App;

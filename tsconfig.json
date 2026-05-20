@@ -16,6 +16,7 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
+    "ignoreDeprecations": "6.0",
 
     /* Linting */
     "strict": false,
@@ -33,11 +34,14 @@
     }
   },
   "include": [
+    "next-env.d.ts",
     "client/**/*",
+    "pages/**/*",
     "server/**/*",
     "shared/**/*",
     "vite.config.ts",
-    "vite.config.server.ts"
+    "vite.config.server.ts",
+    ".next/types/**/*.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

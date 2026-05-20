@@ -18,8 +18,10 @@ View your app in AI Studio: https://ai.studio/apps/efe95422-916a-4f3c-9137-34d15
    `corepack enable`
    `corepack pnpm install`
 2. Configure Supabase env values in `.env`:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (optional alternative to anon key)
+   - `NEXT_PUBLIC_SUPABASE_AUTH_REDIRECT_URL` (optional)
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY` (server only, never expose to client/Tauri)
