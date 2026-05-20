@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "lk.heritagelk.mobile",
   "build": {
-    "frontendDist": "../.next",
+    "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "corepack pnpm dev",
-    "beforeBuildCommand": "corepack pnpm build"
+    "beforeBuildCommand": "corepack pnpm build:tauri"
   },
   "app": {
     "windows": [

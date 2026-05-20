@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { handleDemo } from "../../server/routes/demo";
+import { runExpressHandler } from "../../server/lib/nextApiAdapter";
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  return handleDemo(req as any, res as any, () => undefined);
+  return runExpressHandler(handleDemo, req, res);
 }

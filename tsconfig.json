@@ -39,6 +39,7 @@
     },
     "allowJs": true,
     "incremental": true,
+    "tsBuildInfoFile": ".next/cache/tsconfig.tsbuildinfo",
     "resolveJsonModule": true
   },
   "include": [

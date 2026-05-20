@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
+    "build": "corepack pnpm build:client",
     "build:client": "next build",
+    "build:tauri": "NEXT_OUTPUT_EXPORT=true next build",
     "start": "next start -p 3000",
     "test": "vitest --run",
     "format.fix": "prettier --write .",
