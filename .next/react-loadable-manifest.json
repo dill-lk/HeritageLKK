@@ -1,0 +1,13 @@
+{
+  "pages/[[...slug]].tsx -> ../client/App": {
+    "id": 315,
+    "files": [
+      "static/css/fc1c9daac70c093b.css",
+      "static/chunks/01e5311c.014b8436387f17c4.js",
+      "static/chunks/4a4ff02e.5bfb311fbe327e5e.js",
+      "static/chunks/89487c04.86972a94f3497a40.js",
+      "static/chunks/142.7f776768bbd324a0.js",
+      "static/chunks/315.63e3730a3ec8a047.js"
+    ]
+  }
+}
