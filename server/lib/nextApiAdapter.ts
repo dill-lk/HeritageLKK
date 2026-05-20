@@ -6,7 +6,7 @@ export const runExpressHandler = (
   req: NextApiRequest,
   res: NextApiResponse,
 ) => {
-  if (typeof req !== "object" || req == null || typeof res !== "object" || res == null) {
+  if (req == null || res == null) {
     throw new Error("Invalid Next API request/response objects");
   }
 

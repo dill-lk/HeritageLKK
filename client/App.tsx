@@ -78,7 +78,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter basename={process.env.NEXT_PUBLIC_BASE_PATH ?? ""}>
+        <BrowserRouter basename="">
           <Routes>
             <Route path="/" element={<Navigate to={session ? "/home" : "/login"} replace />} />
             <Route
