@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { isAdminCredentials, signInAdmin } from "@/lib/adminAuth";
 
 const GlobeIcon = () => (
   <svg width="17" height="10" viewBox="0 0 17 10" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -51,8 +52,14 @@ export default function Login() {
     e.preventDefault();
     setAuthMessage("");
 
+    if (isAdminCredentials(email, password)) {
+      signInAdmin();
+      navigate("/home");
+      return;
+    }
+
     if (!supabase) {
-      setAuthMessage("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+      setAuthMessage("Supabase is not configured. Use the admin username/password or add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
       return;
     }
 
@@ -189,8 +196,8 @@ export default function Login() {
                 <UserIcon />
               </div>
               <input
-                type="email"
-                placeholder="Enter Email"
+                type="text"
+                placeholder="Enter Email or Admin Username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

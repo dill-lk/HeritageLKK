@@ -2,6 +2,7 @@ import { ArrowLeft, User, Lock, Bell, Shield, LifeBuoy, MessageSquare, Info, Log
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { adminUser, isAdminSignedIn, signOutAdmin } from "@/lib/adminAuth";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -10,6 +11,14 @@ export default function Settings() {
   
   useEffect(() => {
     async function fetchUser() {
+      if (isAdminSignedIn()) {
+        setUserName(adminUser.name);
+        setUserLevel("Admin Access");
+        return;
+      }
+
+      if (!supabase) return;
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
       
@@ -38,7 +47,8 @@ export default function Settings() {
   }, []);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    signOutAdmin();
+    await supabase?.auth.signOut();
     navigate("/login");
   };
 

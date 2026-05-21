@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Bookmark, MapPin, Info, Sparkles, Loader2 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
+import { getApiUrl } from "@/lib/api";
 import Markdown from "react-markdown";
 
 export default function ArchiveDetail() {
@@ -94,7 +95,7 @@ export default function ArchiveDetail() {
     setGenerateError("");
     setIsGenerating(true);
     try {
-      const res = await fetch("/api/generate-archive", {
+      const res = await fetch(getApiUrl("/api/generate-archive"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic })

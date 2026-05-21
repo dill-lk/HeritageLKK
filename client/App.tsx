@@ -1,7 +1,4 @@
-import "./global.css";
-
 import { Toaster } from "@/components/ui/toaster";
-import { createRoot } from "react-dom/client";
 import { useEffect, useState } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Session } from "@supabase/supabase-js";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { isAdminSignedIn } from "@/lib/adminAuth";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
@@ -30,9 +28,11 @@ const queryClient = new QueryClient();
 const AuthCallback = ({
   isReady,
   session,
+  isAdmin,
 }: {
   isReady: boolean;
   session: Session | null;
+  isAdmin: boolean;
 }) => {
   const navigate = useNavigate();
 
@@ -41,8 +41,8 @@ const AuthCallback = ({
       return;
     }
 
-    navigate(session ? "/home" : "/login", { replace: true });
-  }, [isReady, navigate, session]);
+    navigate(session || isAdmin ? "/home" : "/login", { replace: true });
+  }, [isAdmin, isReady, navigate, session]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#100E0A] px-6 text-center text-[#FEFAE0]">
@@ -51,14 +51,23 @@ const AuthCallback = ({
   );
 };
 
-const App = () => {
+export default function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
+    const syncAdminSession = () => setIsAdmin(isAdminSignedIn());
+    syncAdminSession();
+    window.addEventListener("storage", syncAdminSession);
+    window.addEventListener("heritagelk-admin-auth", syncAdminSession);
+
     if (!supabase) {
       setIsAuthReady(true);
-      return;
+      return () => {
+        window.removeEventListener("storage", syncAdminSession);
+        window.removeEventListener("heritagelk-admin-auth", syncAdminSession);
+      };
     }
 
     void supabase.auth.getSession().then(({ data }) => {
@@ -73,23 +82,29 @@ const App = () => {
       setIsAuthReady(true);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("storage", syncAdminSession);
+      window.removeEventListener("heritagelk-admin-auth", syncAdminSession);
+    };
   }, []);
+
+  const isAuthenticated = Boolean(session) || isAdmin;
 
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to={session ? "/home" : "/login"} replace />} />
+            <Route path="/" element={<Navigate to={isAuthenticated ? "/home" : "/login"} replace />} />
             <Route
               path="/auth/callback"
-              element={<AuthCallback isReady={isAuthReady} session={session} />}
+              element={<AuthCallback isReady={isAuthReady} session={session} isAdmin={isAdmin} />}
             />
-            <Route path="/login" element={session ? <Navigate to="/home" replace /> : <Login />} />
-            <Route path="/signup" element={session ? <Navigate to="/home" replace /> : <Index />} />
+            <Route path="/login" element={isAuthenticated ? <Navigate to="/home" replace /> : <Login />} />
+            <Route path="/signup" element={isAuthenticated ? <Navigate to="/home" replace /> : <Index />} />
             <Route path="/home" element={<Home />} />
             <Route path="/explore" element={<Explore />} />
             <Route path="/quests" element={<Quests />} />
@@ -109,15 +124,4 @@ const App = () => {
       </TooltipProvider>
     </QueryClientProvider>
   );
-};
-
-const rootElement = document.getElementById("root")!;
-// Reuse existing root during HMR to avoid duplicate root warning
-const existingRoot = (rootElement as any).__reactRoot;
-if (existingRoot) {
-  existingRoot.render(<App />);
-} else {
-  const root = createRoot(rootElement);
-  (rootElement as any).__reactRoot = root;
-  root.render(<App />);
 }

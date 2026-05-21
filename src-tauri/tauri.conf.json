@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "lk.heritagelk.mobile",
   "build": {
-    "frontendDist": "../dist/spa",
-    "devUrl": "http://localhost:8080",
+    "frontendDist": "../out",
+    "devUrl": "http://localhost:3000",
     "beforeDevCommand": "corepack pnpm dev",
-    "beforeBuildCommand": "corepack pnpm build:client"
+    "beforeBuildCommand": "corepack pnpm build"
   },
   "app": {
     "windows": [

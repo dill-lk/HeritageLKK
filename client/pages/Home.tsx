@@ -4,6 +4,8 @@ import BottomNav from "@/components/BottomNav";
 import ShingoLogo from "@/components/ShingoLogo";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { getApiUrl } from "@/lib/api";
+import { adminUser, isAdminSignedIn } from "@/lib/adminAuth";
 
 export default function Home() {
   const [userScore, setUserScore] = useState<number>(0);
@@ -17,13 +19,15 @@ export default function Home() {
   const triggerArchives = async () => {
     setTriggering(true);
     try {
-      const { data: { session } } = await supabase!.auth.getSession();
+      const { data: { session } } = supabase
+        ? await supabase.auth.getSession()
+        : { data: { session: null } };
       const token = session?.access_token;
       
       const promises = [];
       for(let i=0; i<5; i++) {
         promises.push(
-          fetch("/api/cron/generate-daily", { 
+          fetch(getApiUrl("/api/cron/generate-daily"), { 
             method: "POST",
             headers: {
               "Authorization": `Bearer ${token}`
@@ -48,6 +52,15 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchPoints() {
+      if (isAdminSignedIn()) {
+        setUserEmail(adminUser.email);
+        setUserName(adminUser.name);
+        setUserScore(9999);
+        setUserRank(1);
+        setPlacesVisited(0);
+        return;
+      }
+
       if (!supabase) return;
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
