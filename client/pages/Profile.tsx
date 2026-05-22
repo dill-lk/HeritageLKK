@@ -3,6 +3,7 @@ import { LogOut, ArrowLeft, Loader2, Star, MapPin, Trophy, Shield, Building, Com
 import { Link, useNavigate } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
+import { adminUser, isAdminSignedIn, signOutAdmin } from "@/lib/adminAuth";
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -16,6 +17,22 @@ export default function Profile() {
   
   useEffect(() => {
     async function loadProfile() {
+      if (isAdminSignedIn()) {
+        setUserEmail(adminUser.email);
+        setUserName(adminUser.name);
+        setPoints(9999);
+        setUserRank(1);
+        setUserLevel(99);
+        setCompletedQuests([]);
+        setLoading(false);
+        return;
+      }
+
+      if (!supabase) {
+        navigate("/login");
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate("/login");
@@ -65,7 +82,8 @@ export default function Profile() {
   }, [navigate]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    signOutAdmin();
+    await supabase?.auth.signOut();
     navigate("/login");
   };
 

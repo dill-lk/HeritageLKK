@@ -3,6 +3,7 @@ import { ArrowLeft, Send, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import ShingoLogo from "@/components/ShingoLogo";
+import { getApiUrl } from "@/lib/api";
 
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -41,7 +42,7 @@ export default function ShingoAi() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/shingo-chat", {
+      const response = await fetch(getApiUrl("/api/shingo-chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),

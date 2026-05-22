@@ -5,6 +5,7 @@ import L from 'leaflet';
 import { Search, Mic, MapPin, History, Map as MapIcon, Flag, Landmark, MoreVertical, RotateCcw, Leaf, ChevronDown, ChevronUp, Thermometer, Wind, CloudSun } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
+import { getApiUrl } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 
 // Default icon fix for React-Leaflet
@@ -80,7 +81,7 @@ export default function Explore() {
   const { data: siteDetails, isLoading } = useQuery({
     queryKey: ['site-details', selectedSite.name],
     queryFn: async () => {
-      const res = await fetch(`/api/site-details?name=${encodeURIComponent(selectedSite.name)}`);
+      const res = await fetch(getApiUrl(`/api/site-details?name=${encodeURIComponent(selectedSite.name)}`));
       if (!res.ok) throw new Error('Failed to fetch details');
       return res.json();
     },
